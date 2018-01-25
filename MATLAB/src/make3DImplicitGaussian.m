@@ -16,7 +16,7 @@
 
 
 
-function G = make3DGaussianMatrix(x, y, z, sigma, spacing, band, numsigmas, LimitFarPoints)
+function G = make3DImplicitGaussian(x, y, z, sigma, spacing, band, numsigmas, LimitFarPoints)
 
 % Prob3D = chi2cdf(numsigma^2,dimension)
 

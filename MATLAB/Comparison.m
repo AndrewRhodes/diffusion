@@ -18,8 +18,11 @@ clc
 % cd ~/Desktop/Ashish/'CS3 Code'/
 addpath(genpath('~/Documents/Software/MeshLP/'))
 addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath('~/Desktop/Ashish/CS3 Code/')
+addpath('~/AFOSR/Ashish/CS3 Code/')
 addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
+addpath('src/')
+addpath('data/')
+addpath('models/')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -69,7 +72,7 @@ Signal2D(MiddleImage, MiddleImage, 1) = 1;
 
 [x,y] = meshgrid(-gausswindow:gausswindow,-gausswindow:gausswindow);
 Gauss =  (1/(2*pi*tau2D^2)) .* exp( -(x.^2 + y.^2) ./ (2*tau2D^2) );
-Gauss = Gauss./sum(Gauss(:))
+Gauss = Gauss./sum(Gauss(:));
 
 for i = 1 : MaxLevel - 1
     
@@ -100,6 +103,7 @@ RadialDist2D = sqrt(sum(bsxfun(@minus, xyImage2D, xyImage2D(Image2Dcenter,:)).^2
 
 
 
+ScaleParameterImage = findScaleParamter(tau2D, MaxLevel, 1, 2);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Figures for paper %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -160,6 +164,7 @@ for i = [5,15,35]
 end
 
 
+
 figure
 imshow(Signal2D(:,:,5),[])
 
@@ -191,9 +196,9 @@ PointCloud.Signal = zeros(PointCloud.LocationCount,1);
 PointCloud.Signal(PointCloudCenter,1) = 1;
 PointCloud = findMeshResolution(PointCloud, 'Model');
 
-save_off(PointCloud.Location, PointCloud.Face, strcat('Plane',num2str(NumPointSurf),'.off'));
+% save_off(PointCloud.Location, PointCloud.Face, strcat('Plane',num2str(NumPointSurf),'.off'));
 
-[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix(strcat('Plane',num2str(NumPointSurf),'.off'));
+[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix(strcat('models/Plane',num2str(NumPointSurf),'.off'));
 
 % [LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('Plane120.off');
 hEdge = (hEdge2/2);
@@ -240,40 +245,8 @@ end
 
 
 
+ScaleParameterSpatial = findScaleParamter(tauExplicit, NumStepsExplcit, 1, 3);
 
-% Find the scale parameters
-maxsample = 2; 
-ws = 0 : 0.001 : maxsample;
-NumSample = length(ws);
-ScaleParameterSpatial = zeros(NumStepsExplcit,1);
-ScaleParameterSpatial2 = zeros(NumStepsExplcit,1);
-cut = sqrt(log(2));
-db3 = 1/sqrt(2);
-ws2 = (ws.^2)';
-H =  ones(NumSample,1) ;
-H2 =  ones(NumSample,1) ;
-h = 1 ./ ( ones(NumSample,1) + tauExplicit/hEdge^2 * ws2 );
-h2 = 1 ./ ( ones(NumSample,1) + tauExplicit * ws2 );
-
-for i = 2 : NumStepsExplcit
-    
-    % Transfer function
-    % 1st order
-    H = H .* h;
-    H2 = H2 .* h2;
-    % Find the frequency at the cutoff values
-    CutoffFrequency = interp1(H, ws, db3);
-    % Change cutoff frequency to scale parameter
-    ScaleParameterFrequency = CutoffFrequency / cut;   
-    ScaleParameterSpatial(i,1) = hEdge / ScaleParameterFrequency;
-
-
-    CutoffFrequency = interp1(H2, ws, db3);
-    % Change cutoff frequency to scale parameter
-    ScaleParameterFrequency = CutoffFrequency / cut;  
-    ScaleParameterSpatial2(i,1) = 1 / ScaleParameterFrequency;
-
-end
 
 
 
@@ -537,33 +510,8 @@ end
 
 
 
+ScaleParameterSpatialImplicit = findScaleParamter(tauImplicit, NumStepsImplicit, 1, 3);
 
-% Find the scale parameters
-maxsample = 10; 
-ws = 0 : 0.01 : maxsample;
-NumSample = length(ws);
-ScaleParameterSpatialImplicit = zeros(NumStepsImplicit,1);
-cut = sqrt(log(2));
-db3 = 1/sqrt(2);
-ws2 = (ws.^2)';
-H = ones(NumSample,1) ;
-% h = 1 ./ ( ones(NumSample,1) + tauImplicit/spacing^2 * ws2 );
-h = 1 ./ ( ones(NumSample,1) + tauImplicit * ws2 );
-
-for i = 2 : NumStepsImplicit
-    
-    % Transfer function
-    % 1st order
-    H = H .* h;
-    % Find the frequency at the cutoff values
-    [uH, indH] = unique(H);
-    CutoffFrequencyImplicit = interp1(uH, ws(indH), db3);
-    % Change cutoff frequency to scale parameter
-    ScaleParameterFrequencyImplicit = CutoffFrequencyImplicit / cut;   
-%     ScaleParameterSpatialImplicit(i,1) =  spacing / ScaleParameterFrequencyImplicit;
-    ScaleParameterSpatialImplicit(i,1) =  1 / ScaleParameterFrequencyImplicit;
-
-end
 
 
 

@@ -1,4 +1,7 @@
-
+% Andrew Rhodes
+% WVU
+% Jan. 2018
+% Compare the scale estimation technique by Fadaifard to our technique
 
 
 
@@ -8,62 +11,50 @@ clc
 
 
 NumSteps = 50;
+tau = 1;
 
-% Find the scale parameters
+%% Method of cutoff frequency 
+
 maxsample = 10; 
-ws = 0 : 0.05 : maxsample;
+ws = 0 : 0.01 : maxsample;
 NumSample = length(ws);
-ScaleParameterSpatial1 = zeros(NumSteps,1);
-ScaleParameterSpatial2 = zeros(NumSteps,1);
-ScaleParameterFrequency1 = zeros(NumSteps,1);
-ScaleParameterFrequency2 = zeros(NumSteps,1);
-CutoffFrequency1 = zeros(NumSteps,1);
-CutoffFrequency2 = zeros(NumSteps,1);
+ScaleParameterSpatial = zeros(NumSteps,1);
 cut = sqrt(log(2));
 db3 = 1/sqrt(2);
 ws2 = (ws.^2)';
-tau = 1;
-hEdge = 3;
-H1 = zeros(NumSample,NumSteps);
-H1(:,1) =  ones(NumSample,1) ;
-H2 = zeros(NumSample,NumSteps);
-H2(:,1) =  ones(NumSample,1) ;
-h1 = 1 ./ ( ones(NumSample,1) + tau / hEdge^2 * ws2 );
-h2 = 1 ./ ( ones(NumSample,1) + tau * ws2 );
 
-for i = 1 : NumSteps - 1
+H = ones(NumSample,1) ;
+h = 1 ./ ( ones(NumSample,1) + tau * ws2 );
+
+for i = 2 : NumSteps
     
     % Transfer function
     % 1st order
-    H1(:,i+1) = H1(:,i) .* h1;
+    H = H .* h;
     % Find the frequency at the cutoff values
-    CutoffFrequency1(i+1,1) = interp1(H1(:,i+1), ws, db3);
+    [uH, indH] = unique(H);
+    CutoffFrequencyImplicit = interp1(uH, ws(indH), db3);
     % Change cutoff frequency to scale parameter
-    ScaleParameterFrequency1(i,1) = CutoffFrequency1(i+1,1) / cut;   
-    ScaleParameterSpatial1(i,1) = hEdge / ScaleParameterFrequency1(i,1);
-    
-    
-    
-    % Transfer function
-    % 1st order
-    H2(:,i+1) = H2(:,i) .* h2;
-    % Find the frequency at the cutoff values
-    CutoffFrequency2(i+1,1) = interp1(H2(:,i+1), ws, db3);
-    % Change cutoff frequency to scale parameter
-    ScaleParameterFrequency2(i,1) = CutoffFrequency2(i+1,1) / cut;   
-    ScaleParameterSpatial2(i,1) = 1 / ScaleParameterFrequency2(i,1);
-    
-    
+    ScaleParameterFrequency = CutoffFrequencyImplicit / cut;   
+    ScaleParameterSpatial(i,1) =  1 / ScaleParameterFrequency;
+
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Fadiafard Method (with a constrained search range)
+
+%% Method of natural scale growth 
 
 
+ScaleParameterSpatialNatural = zeros(NumSteps,1);
+
+for i = 1 : NumSteps - 1
+   
+    ScaleParameterSpatialNatural(i+1,1) = sqrt(2*i*tau);
+
+end
 
 
+%% Method of Faidarfard 
 
-% fs_spatial = sqrt(tau) ./ (2*pi*fs_frequency);
 
 j = 3;
 figure

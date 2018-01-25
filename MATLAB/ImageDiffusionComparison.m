@@ -18,8 +18,12 @@ clc
 % cd ~/Desktop/Ashish/'CS3 Code'/
 addpath(genpath('~/Documents/Software/MeshLP/'))
 addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath('~/Desktop/Ashish/CS3 Code/')
+addpath('~/AFOSR/Ashish/CS3 Code/')
 addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
+addpath('src/')
+addpath('images/')
+addpath('data/')
+addpath('models/')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -135,98 +139,10 @@ for i = 1 : NumPixels
 end
 
 
+DoGImage = findDoG(Signal2D, ScaleParamterImage);
 
-% LaplacianScale = zeros(NumPixels, MaxLevel-1);
-LaplacianScaleNormalized = zeros(NumPixels, MaxLevel-1);
-% LaplaceScaleInvariant = zeros(NumPixels, MaxLevel-1);
+KeyPoint = findKeyPoints(DoGImage, ScaleParamterImage, Neighbors2D, NumPixels, 2);
 
-
-
-for i = 1 : MaxLevel-1
-    
-    
-    % Estimated Laplacian
-%     LaplacianScale(:,i) = ( reshape(Signal2D(:,:,i+1),[],1) - reshape(Signal2D(:,:,i),[],1) ) / (ScaleParamterImage(i+1)^2-ScaleParamterImage(i)^2);
-    
-    % Scale Normalized Laplacian
-    LaplacianScaleNormalized(:,i) = 2 * ( reshape(Signal2D(:,:,i+1),[],1) - reshape(Signal2D(:,:,i),[],1) ) * (ScaleParamterImage(i)^2 / (ScaleParamterImage(i+1)^2 - ScaleParamterImage(i)^2) );
-
-    % Scale Invariant Laplace
-%     Fbar = (sum(reshape(Signal2D(:,:,i+1),[],1)) / (NumPixels)) * ones(NumPixels, 1) ;
-%     
-%     SigmaL = sqrt(sum((LaplacianScale(:,i)-Fbar).^2)) / sqrt(NumPixels);
-%     %  
-%     LaplaceScaleInvariant(:,i) = ( LaplacianScale(:,i) - Fbar ) / SigmaL;
-    
-end
-
-
-% Use this laplacian descriptor
-LaplaceDOG2D = LaplacianScaleNormalized;
-
-
-NumFeatures = 0;
-FeaturePoint2D.Scale = zeros(10000,1);
-FeaturePoint2D.Location = zeros(10000,1);
-
-for i = 1 : NumPixels
-    
-    CurrentNeighbors = Neighbors2D{i,1};
-    CurrentNeighbors = sub2ind([MaxImageSize(1),MaxImageSize(2)], CurrentNeighbors(:,1), CurrentNeighbors(:,2));
-    
-    for j = 2 : MaxLevel - 2
-        
-        CurrentValue = LaplaceDOG2D(i,j);
-        
-        SurroundingValues_under = LaplaceDOG2D([i;CurrentNeighbors],j-1);
-        SurroundingValues_same = LaplaceDOG2D(CurrentNeighbors,j);
-        SurroundingValues_above = LaplaceDOG2D([i;CurrentNeighbors],j+1);
-        
-        
-        if all(CurrentValue > SurroundingValues_same)
-            
-            if all(CurrentValue > SurroundingValues_under)
-                if all(CurrentValue > SurroundingValues_above)
-                    NumFeatures = NumFeatures + 1;
-                    % Maximum
-                    FeaturePoint2D.Scale(NumFeatures, 1) = ScaleParamterImage(j);
-                    FeaturePoint2D.Location(NumFeatures, 1) = i;
-                end
-            end
-            
-        elseif all(CurrentValue < SurroundingValues_same)
-            
-            if all(CurrentValue < SurroundingValues_under)
-                if all(CurrentValue < SurroundingValues_above)
-                    % Minimum
-                    NumFeatures = NumFeatures + 1;
-                    FeaturePoint2D.Scale(NumFeatures, 1) = ScaleParamterImage(j);
-                    FeaturePoint2D.Location(NumFeatures, 1) = i;
-                end
-            end
-        end
-        
-        
-        % Check Both if it is maximum or minimum
-        %         if all(CurrentValue > SurroundingValues)
-        %             NumFeatures = NumFeatures + 1;
-        %             % Maximum
-        %             FeaturePoint2D.Scale(NumFeatures, 1) = ScaleParamterImage(j);
-        %             FeaturePoint2D.Location(NumFeatures, 1) = i;
-        %         end
-        %         if all(CurrentValue < SurroundingValues)
-        %             % Minimum
-        %              NumFeatures = NumFeatures + 1;
-        %             FeaturePoint2D.Scale(NumFeatures, 1) = ScaleParamterImage(j);
-        %             FeaturePoint2D.Location(NumFeatures, 1) = i;
-        %         end
-        
-    end
-    
-end
-
-FeaturePoint2D.Scale(FeaturePoint2D.Location == 0) = [];
-FeaturePoint2D.Location(FeaturePoint2D.Location == 0) = [];
 
 
 % Comet67P Only
@@ -290,9 +206,7 @@ MiddleSurfPoint = round(NumPointSurf/2);
 
 
 PointCloud.Location = [xSurf3D(:), ySurf3D(:), zSurf3D(:)];
-% PointCloud.Location = [ySurf3D(:), xSurf3D(:), zSurf3D(:)];
 PointCloud.LocationCount = length(PointCloud.Location);
-% PointCloud.Face = delaunay(xSurf3D(:), ySurf3D(:));
 PointCloud.Face = delaunay(ySurf3D(:), xSurf3D(:));
 PointCloud.FaceCount = length(PointCloud.Face);
 PointCloud.FaceArea = findFaceArea(PointCloud.Location, PointCloud.Face);
@@ -304,7 +218,7 @@ Neighbors3D = findAdjacentNeighbors(PointCloud.Face, PointCloud.Location);
 
 save_off(PointCloud.Location, PointCloud.Face, 'PlaneImage.off');
 
-[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('PlaneImage.off');
+[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('models/PlaneImage.off');
 
 hEdge = (hEdge2/2);
 % tauExplicit = 0.5*hEdge^2;
@@ -366,26 +280,11 @@ end
 
 
 % Find the scale parameters
-maxsample = 2; 
-ws = 0 : 0.001 : maxsample;
-NumSample = length(ws);
+
 ScaleParameterSpatialExplicit = zeros(NumStepsExplcit,2);
-cut = sqrt(log(2));
-db3 = 1/sqrt(2);
-ws2 = (ws.^2)';
-H =  ones(NumSample,1) ;
-h = 1 ./ ( ones(NumSample,1) + tauExplicit * ws2 );
 
 for i = 2 : NumStepsExplcit
-    
-    % Transfer function
-    % 1st order
-    H = H .* h;
-    % Find the frequency at the cutoff values
-    CutoffFrequency = interp1(H, ws, db3);
-    % Change cutoff frequency to scale parameter
-    ScaleParameterFrequency = CutoffFrequency / cut;  
-    ScaleParameterSpatialExplicit(i,1) = 1 / ScaleParameterFrequency;
+
     ScaleParameterSpatialExplicit(i,2) = sqrt(2*i*tauExplicit);
 end
 
@@ -393,83 +292,20 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Estimated Laplacians (Difference of Gaussian DoG)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Defined by Fadaifard
-% Scale Normalized Laplacian, and scale Invariant Laplacian
 
-LaplacianScale = zeros(PointCloud.LocationCount, NumStepsExplcit-1);
-LaplacianScaleNormalized = zeros(PointCloud.LocationCount, NumStepsExplcit-1);
-LaplaceScaleInvariant = zeros(PointCloud.LocationCount, NumStepsExplcit-1);
-
-
-for i = 1 : NumStepsExplcit-1
-    
-    % Estimated Laplacian
-    LaplacianScale(:,i) = ( SignalExplicit(:,i+1) - SignalExplicit(:,i) ) / (ScaleParameterSpatialExplicit(i+1,1)^2-ScaleParameterSpatialExplicit(i,1)^2);
-    
-    % Scale Normalized Laplacian
-    LaplacianScaleNormalized(:,i) = 2 * ( SignalExplicit(:,i+1) - SignalExplicit(:,i) ) * (ScaleParameterSpatialExplicit(i,1)^2 / (ScaleParameterSpatialExplicit(i+1,1)^2 - ScaleParameterSpatialExplicit(i,1)^2) );
-    
-    % Scale Invariant Laplace
-    Fbar = (sum(SignalExplicit(:,i)) / PointCloud.LocationCount) * ones(PointCloud.LocationCount, 1) ;
-    
-    SigmaL = sqrt(sum((LaplacianScale(:,i)-Fbar).^2)) / sqrt(PointCloud.LocationCount);
-    %  
-    LaplaceScaleInvariant(:,i) = ( LaplacianScale(:,i) - Fbar ) / SigmaL;
-    
-end
-
+DoGExplicit = findDoG(SignalExplicit, ScaleParameterSpatialExplicit);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Extrema Detection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Use this laplacian descriptor
-LaplaceDOG = LaplacianScaleNormalized;
 
-FeaturePoint.Scale = zeros(11000,2);
-FeaturePoint.Location = zeros(11000,1);
-
-NumFeatures = 0;
-
-for i = 1 : PointCloud.LocationCount
-    
-    CurrentNeighbors = Neighbors3D{i,1};
-    
-    for j = 2 : NumStepsExplcit - 2
-        
-        CurrentValue = LaplaceDOG(i,j);
-        
-        SurroundingValues = [LaplaceDOG([i,CurrentNeighbors],j-1);
-            LaplaceDOG(CurrentNeighbors,j);
-            LaplaceDOG([i,CurrentNeighbors],j+1)];
-        
-        % Check Both if it is maximum or minimum
-        if all(CurrentValue > SurroundingValues)
-            NumFeatures = NumFeatures + 1;
-            % Maximum
-            FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialExplicit(j,:);
-            FeaturePoint.Location(NumFeatures, 1) = i;
-        end
-        if all(CurrentValue < SurroundingValues)
-            % Minimum
-             NumFeatures = NumFeatures + 1;
-            FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialExplicit(j,:);
-            FeaturePoint.Location(NumFeatures, 1) = i;
-        end
-        
-    end
-    
-end
-
-
-
-FeaturePoint.Scale(FeaturePoint.Location == 0,:) = [];
-FeaturePoint.Location(FeaturePoint.Location == 0) = [];
+KeyPointExplicit = findKeyPoints(DoGExplicit, ScaleParameterSpatialExplicit, Neighbors3D, PointCloud.LocationCount, 3);
 
 % save FeaturePointFlowersExplicit3D FeaturePoint
 
 
 
-[SortValue3D, SortOrder3D] = sort(FeaturePoint.Scale(:,2),'descend');
+[SortValue3D, SortOrder3D] = sort(KeyPointExplicit.Scale(:,2),'descend');
 
 
 CircleAngle = linspace(0, 2*pi, 360);
@@ -489,7 +325,7 @@ hold on
 
 for i = 1 : length(PlotFeatures)
 % % % % %     CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),1);PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),2)]);
-    CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),2);PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),1)]);
+    CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(KeyPointExplicit.Location(SortOrder3D(PlotFeatures(i))),2);PointCloud.Location(KeyPointExplicit.Location(SortOrder3D(PlotFeatures(i))),1)]);
 
     plot(CircleAtPoint(1,:), CircleAtPoint(2,:),'r')
     
@@ -583,28 +419,10 @@ Signal = FaceInterpolateWeights * PointCloud.Signal;
 % Precompute the scale parameter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Find the scale parameters
-% maxsample = 10; 
-% ws = 0 : 0.01 : maxsample;
-% NumSample = length(ws);
 ScaleParameterSpatialImplicit = zeros(NumStepsImplicit,1);
-% cut = sqrt(log(2));
-% db3 = 1/sqrt(2);
-% ws2 = (ws.^2)';
-% H = ones(NumSample,1) ;
-% h = 1 ./ ( ones(NumSample,1) + tauImplicit/spacing^2 * ws2 );
 
 for i = 1 : NumStepsImplicit - 1
-    
-    % Transfer function
-    % 1st order
-%     H = H .* h;
-    % Find the frequency at the cutoff values
-%     [uH, indH] = unique(H);
-%     CutoffFrequencyImplicit = interp1(uH, ws(indH), db3);
-    % Change cutoff frequency to scale parameter
-%     ScaleParameterFrequencyImplicit = CutoffFrequencyImplicit / cut;   
-%     ScaleParameterSpatialImplicit(i+1,1) =  spacing / ScaleParameterFrequencyImplicit;
+   
     ScaleParameterSpatialImplicit(i+1,1) = sqrt(2*i*tauImplicit);
 
 end
@@ -679,99 +497,15 @@ end
 % Defined by Fadaifard
 % Scale Normalized Laplacian, and scale Invariant Laplacian
 
-LaplacianScale = zeros(PointCloud.LocationCount, NumStepsImplicit-1);
-LaplacianScaleNormalized = zeros(PointCloud.LocationCount, NumStepsImplicit-1);
-LaplaceScaleInvariant = zeros(PointCloud.LocationCount, NumStepsImplicit-1);
 
-
-for i = 1 : NumStepsImplicit-1
-    
-    % Estimated Laplacian
-    LaplacianScale(:,i) = ( SignalImplicit(:,i+1) - SignalImplicit(:,i) ) / (ScaleParameterSpatialImplicit(i+1,1)^2-ScaleParameterSpatialImplicit(i,1)^2);
-    
-    % Scale Normalized Laplacian
-    LaplacianScaleNormalized(:,i) = 2 * ( SignalImplicit(:,i+1) - SignalImplicit(:,i) ) * (ScaleParameterSpatialImplicit(i,1)^2 / (ScaleParameterSpatialImplicit(i+1,1)^2 - ScaleParameterSpatialImplicit(i,1)^2) );
-    
-    % Scale Invariant Laplace
-    Fbar = (sum(SignalImplicit(:,i)) / PointCloud.LocationCount) * ones(PointCloud.LocationCount, 1) ;
-    
-    SigmaL = sqrt(sum((LaplacianScale(:,i)-Fbar).^2)) / sqrt(PointCloud.LocationCount);
-    %  
-    LaplaceScaleInvariant(:,i) = ( LaplacianScale(:,i) - Fbar ) / SigmaL;
-    
-end
-
-
+DoGImplicit = findDoG(SignalImplicit, ScaleParameterSpatialImplicit);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Extrema Detection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Use this laplacian descriptor
-LaplaceDOG = LaplacianScaleNormalized;
+KeyPointImplicit = findKeyPoints(DoGImplicit, ScaleParameterSpatialImplicit, Neighbors3D, PointCloud.LocationCount, 3);
 
-FeaturePoint.Scale = zeros(10000,2);
-FeaturePoint.Location = zeros(10000,1);
-
-NumFeatures = 0;
-
-for i = 1 : PointCloud.LocationCount
-    
-    CurrentNeighbors = Neighbors3D{i,1};
-    
-    for j = 2 : NumStepsImplicit - 2
-        
-        CurrentValue = LaplaceDOG(i,j);
-        
-        SurroundingValues_under = LaplaceDOG([i,CurrentNeighbors],j-1);
-        SurroundingValues_same = LaplaceDOG(CurrentNeighbors,j);
-        SurroundingValues_above = LaplaceDOG([i,CurrentNeighbors],j+1);
-        
-        
-        if all(CurrentValue > SurroundingValues_same)
-            
-            if all(CurrentValue > SurroundingValues_under)
-                if all(CurrentValue > SurroundingValues_above)
-                    NumFeatures = NumFeatures + 1;
-                    % Maximum
-                    FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialImplicit(j,:);
-                    FeaturePoint.Location(NumFeatures, 1) = i;
-                end
-            end
-            
-        elseif all(CurrentValue < SurroundingValues_same)
-            
-            if all(CurrentValue < SurroundingValues_under)
-                if all(CurrentValue < SurroundingValues_above)
-                    % Minimum
-                    NumFeatures = NumFeatures + 1;
-                    FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialImplicit(j,:);
-                    FeaturePoint.Location(NumFeatures, 1) = i;
-                end
-            end
-        end
-        
-        
-        % Check Both if it is maximum or minimum
-%         if all(CurrentValue > SurroundingValues)
-%             NumFeatures = NumFeatures + 1;
-%             % Maximum
-%             FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialImplicit(j,:);
-%             FeaturePoint.Location(NumFeatures, 1) = i;
-%         end
-%         if all(CurrentValue < SurroundingValues)
-%             % Minimum
-%              NumFeatures = NumFeatures + 1;
-%             FeaturePoint.Scale(NumFeatures, 1:2) = ScaleParameterSpatialImplicit(j,:);
-%             FeaturePoint.Location(NumFeatures, 1) = i;
-%         end
-        
-    end
-    
-end
-
-FeaturePoint.Scale(FeaturePoint.Location == 0,:) = [];
-FeaturePoint.Location(FeaturePoint.Location == 0) = [];
 
 % For Comet67P
 % LowLightLogic = Image(FeaturePoint.Location)< 0.04;
@@ -791,7 +525,7 @@ FeaturePoint.Location(FeaturePoint.Location == 0) = [];
 
 load('FeaturePointFlowers_FullRes.mat')
 
-[SortValue3D, SortOrder3D] = sort(FeaturePoint.Scale(:,2),'descend');
+[SortValue3D, SortOrder3D] = sort(KeyPointImplicit.Scale(:,2),'descend');
 
 
 CircleAngle = linspace(0, 2*pi, 360);
@@ -811,7 +545,7 @@ hold on
 
 
 for i = 1 : length(PlotFeatures)
-    CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),1);PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),2)]);
+    CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(KeyPointImplicit.Location(SortOrder3D(PlotFeatures(i))),1);PointCloud.Location(KeyPointImplicit.Location(SortOrder3D(PlotFeatures(i))),2)]);
 % % % % % % %     CircleAtPoint = bsxfun(@plus, SortValue3D(PlotFeatures(i))*[CircleX; CircleY], [PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),2);PointCloud.Location(FeaturePoint.Location(SortOrder3D(PlotFeatures(i))),1)]);
 
     plot(CircleAtPoint(1,:), CircleAtPoint(2,:),'r')
