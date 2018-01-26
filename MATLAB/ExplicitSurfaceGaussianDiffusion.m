@@ -5,15 +5,18 @@
 
 AverageEdgeLength = findAverageEdgeLengths(PointCloud.Location, PointCloud.Face, 1);
 
- G = makeMeshGaussian(PointCloud, AverageEdgeLength, 2*sqrt(2)*AverageEdgeLength, 1);
+tic
+G = makeMeshGaussian(PointCloud, AverageEdgeLength, 2*sqrt(2)*AverageEdgeLength, 0);
+toc
 
-
+ NumSteps = 500;
+ 
 SignalExplicit = zeros(PointCloud.LocationCount, NumSteps);
 SignalExplicit(:,1) = PointCloud.Signal;
 
-NumSteps = 50;
 
-WaitBar = waitbar(0, sprintf('Vertex %i of %i', 0, NumSteps-1));
+
+WaitBar = waitbar(0, sprintf('Exp Gaus Diff Step %i of %i', 0, NumSteps-1));
 figure
 for i = 1 : NumSteps - 1
     
@@ -27,10 +30,10 @@ for i = 1 : NumSteps - 1
      imshow(reshape(SignalExplicit(:,i), MaxImageSize(1), MaxImageSize(2)),[])
      drawnow
      
-    waitbar(i/NumSteps, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumSteps-1));
+    waitbar(i/NumSteps, WaitBar, sprintf('Exp Gauss Diff Step %i of %i', i, NumSteps-1));
     
 end
-waitbar(i/PointCloud.LocationCount, WaitBar, sprintf('Building Complete'));
+waitbar(i/PointCloud.LocationCount, WaitBar, sprintf('Exp Gauss Diff Step Complete'));
 close(WaitBar)
 
 

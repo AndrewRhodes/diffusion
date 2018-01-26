@@ -93,7 +93,7 @@ for i = 1 : MaxLevel - 1
 
     imshow(Signal2D(:,:,i+1))
     drawnow
-    i
+    
 %     ScaleParamterImage(i+1) = sqrt(2*i * tau2D^2);
     ScaleParamterImage(i+1) = sqrt(i) * tau2D;
 end
@@ -397,12 +397,12 @@ Ecp = interp3_matrix(y1d, x1d, z1d, CP(:,2), CP(:,1), CP(:,3), porder, Band);
 % load('L67P.mat')
 % load('Ecp67P.mat')
 
-load('Eplot67PFlip.mat')
-load('CP67PFlip.mat')
-load('IJK67PFlip.mat')
-load('CPFACE67PFlip.mat')
-load('L67PFlip.mat')
-load('Ecp67PFlip.mat')
+% load('Eplot67PFlip.mat')
+% load('CP67PFlip.mat')
+% load('IJK67PFlip.mat')
+% load('CPFACE67PFlip.mat')
+% load('L67PFlip.mat')
+% load('Ecp67PFlip.mat')
 
 M = lapsharp(L, Ecp);
 
