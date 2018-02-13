@@ -5,6 +5,8 @@
 % makeMeshGaussian makes the approximate Gaussian on triangulated mesh
 % surfaces
 % 
+% The Gaussian std is assumed to be the AverageEdgeLength
+% 
 % With Matlab, it can only use Eucluidean distance between neighboring
 % verticies
 %
@@ -12,7 +14,7 @@
 % and Face size [mx3]
 % input[AverageEdgeLength]: average edge length of mesh
 % input[SearchRange]: the width of the gaussian, usually 2*sqrt(2)*AverageEdgeLength
-% input[NormalizeLogic]:
+% input[NormalizeMethod]:
 %
 % output[G]: The discrete mesh Gaussian, sparse, size[nxn]
 
@@ -23,7 +25,7 @@
 %           second-ring neighbors.
 
 
-function G = makeMeshGaussian(PointCloud, AverageEdgeLength, SearchRange, NormalizeLogic)
+function G = makeMeshGaussian(PointCloud, AverageEdgeLength, SearchRange, NormalizeMethod)
 
 % Determine if 
 if ~isfield(PointCloud, {'Location','Face', 'FaceArea'})
@@ -93,17 +95,17 @@ ConstAreaExpWeight = cellfun(@times, num2cell(1/(2*pi*AverageEdgeLength^2)*ones(
 % Reshape into column vector for use in sparse matrix constuction
 Weights = vertcat(ConstAreaExpWeight{:});
 
-
+Weights = vertcat(AreaExpWeight{:});
 
 GA = sparse(Position1, Position2, Weights, PointCloud.LocationCount, PointCloud.LocationCount);
 
 B = sparse(1:PointCloud.LocationCount, 1:PointCloud.LocationCount, 1./PointCloud.VertexArea) * GA;
 
 
-if NormalizeLogic
+if NormalizeMethod == 1
     G = B ./ max(sum(B,2));
-else
-    G = B;
+elseif NormalizeMethod == 2
+    G = bsxfun(@rdivide, B , sum(B,2));
 end
 
 
