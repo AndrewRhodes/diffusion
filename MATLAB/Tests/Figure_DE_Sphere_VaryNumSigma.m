@@ -44,13 +44,19 @@ for MCd = 1 : length(MCdiv)
 % options.dtype = 'geodesic';
 options.dtype = 'euclidean';
 
+alpha = 1;
 
-    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Setup File Name Directions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 FileLocation = '../models/Sphere/';
 FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
-alpha = 1;
-
+FileLocationMeshLP = '../models/Sphere/meshLP/';
+FileNameLapMat = strcat('LapMatMeshWeights','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
+FileNameArea = strcat('Area','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
+FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 
 
 
@@ -61,7 +67,7 @@ alpha = 1;
 
 if ~exist(fullfile(FileLocation, FileName), 'file')
     
-    [Sphere.Location,Sphere.Face] = icosphere(NumberDivisions);
+    [Sphere.Location, Sphere.Face] = icosphere(NumberDivisions);
     
     save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
     
@@ -103,10 +109,33 @@ NumStepsExplicit = round(MaxTauExplicit);
 
 [Theta, Phi, Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
 
+
+% [Ymn,THETA,PHI,Xm,Ym,Zm]=spharm(10,10,[length(Theta), length(Phi)],0);
+
+
+L = 10;
+M = 10;
+
+Lmn=legendre(L,cos(Phi));
+
+if L~=0
+  Lmn=squeeze(Lmn(M+1,:,:));
+end
+
+a1=((2*L+1)/(4*pi));
+a2=factorial(L-M)/factorial(L+M);
+C=sqrt(a1*a2);
+
+Ymn=C*Lmn'.*exp(i*M*Theta);
+
+
+
+
+
 % Define the signal
 % SignalOriginal = cos(1.5*Phi + pi/2) + sin(2.5*Theta - pi/2);
-SignalOriginal = cos(Theta);% + sin(2.5*Theta);
-
+% SignalOriginal = cos(Theta);
+SignalOriginal = reshape(real(Ymn),[],1);
 
 Sphere.Signal = SignalOriginal;
 
@@ -114,10 +143,7 @@ Sphere.Signal = SignalOriginal;
 % Construct the Laplace Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-FileLocationMeshLP = '../models/Sphere/meshLP/';
-FileNameLapMat = strcat('LapMatMeshWeights','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
-FileNameArea = strcat('Area','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
-FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
+
 
 if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
     
@@ -151,7 +177,14 @@ I23tL = speye(Alength, Alength) - (2/3)*alpha*tauExplicit * LBM;
 % Scale Parameter Estimation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ScaleParameter = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
+% ScaleParameter1 = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
+
+ScaleParameter = zeros(NumStepsExplicit,1);
+for i = 1 : NumStepsExplicit
+   
+    ScaleParameter(i+1,1) = sqrt(2*i^2*alpha*tauExplicit);
+    
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -167,30 +200,42 @@ AbsErr = zeros(NumStepsExplicit,1);
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplicit-1));
 
+figure(1)
 for i = 1 : NumStepsExplicit - 1
     
-    if i == 1
+%     if i == 1
     %     [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), [], 1e-10, 60);
         [SignalExplicit(:,i+1), flag] = gmres(ItL, SignalExplicit(:,i), [], 1e-10, 100);
-    else
-        [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
-    end
+%     else
+%         [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
+%     end
     
     if flag
         disp(flag)
     end
     
-    Truth = exp(-ScaleParameter(i+1)^2/2) .* SignalOriginal;
+    clf
+    plot(Theta, SignalOriginal,'b.')
+    hold on
+    plot(Theta, SignalExplicit(:,i),'ko')
     
-	AbsErr(i+1,1) = norm(Truth - SignalExplicit(:,i+1), inf);
-    
+    Truth = exp(-ScaleParameter(i)^2/2) * SignalOriginal;
+% % %     Truth = exp(-ScaleParameter(i)^2/2) .* cos(Theta) + exp(-9*ScaleParameter(i)^2/2) .* sin(3*Theta);
+    plot(Theta, Truth,'rs')
+	AbsErr(i,1) = norm(Truth - SignalExplicit(:,i), inf);
+   
     
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
-    
+    if i ==1
+        pause
+    else
+        pause%(0.2)
+    end
 end
 
 waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
 close(WaitBar)
+close(figure(1))
 
 
 MCError(MCd, 1:2, MCr) = [NumStepsExplicit, AbsErr(NumStepsExplicit - 1)];
