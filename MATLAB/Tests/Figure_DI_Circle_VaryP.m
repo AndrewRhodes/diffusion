@@ -29,7 +29,7 @@ addpath(genpath('../models/'))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005, 0.0025];%, 0.001];
-MCporder = [1, 3, 4, 5, 6, 7];
+MCporder = [1, 2, 3, 4, 5, 6, 7];
 
 MCError = zeros(length(MCspacing), 2, length(MCporder));
 MCErrorAll = cell(length(MCspacing), length(MCporder));
@@ -49,7 +49,7 @@ alpha = 1;
 
 % porder = 5; 
 dim = 2;
-Lorder = 4;
+Lorder = 2;
 % spacing = 0.01;
 bandwidth = 1.00001*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
 
@@ -62,7 +62,7 @@ NumStepsImplicit = round(MaxTauImplicit); % 3000;%100*MaxTauImplicit; %ceil(MaxT
 % Make the Circle and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Theta = linspace(0,2*pi,200)';
+Theta = linspace(0,2*pi,1000)';
 
 Radius = ones(size(Theta));
 [xp,yp] = pol2cart(Theta, Radius);
@@ -71,8 +71,8 @@ Circle.Location(:,2) = yp(:);
 Circle.LocationCount = length(Circle.Location);
 
 
-% SignalOriginal = cos(Theta) + sin(3*Theta);
-SignalOriginal = cos(Theta);
+SignalOriginal = cos(Theta) + sin(3*Theta);
+% SignalOriginal = cos(Theta);
 
 
 Circle.Signal = SignalOriginal;
@@ -99,11 +99,11 @@ GridXBand = GridX(band);
 GridYBand = GridY(band);
 
 
-[CPTheta, CPr] = cart2pol(GridXBand,GridYBand);
+[CPTheta, CPr] = cart2pol(CP(:,1),CP(:,2));
 
 
-% CPSignal = cos(CPTheta)+ sin(3*CPTheta);
-CPSignal = cos(CPTheta);
+CPSignal = cos(CPTheta)+ sin(3*CPTheta);
+% CPSignal = cos(CPTheta);
 
 Ecp = interp2_matrix(x1d, y1d, CP(:,1), CP(:,2), porder, band);
 % Ecp = Ecp(outer_band,inner_band);
@@ -195,8 +195,8 @@ for i = 1 : NumStepsImplicit - 1
     plot(Theta, SignalOriginal,'b')
     hold on
     plot(Theta, SignalAtVertex(:,i+1),'k')
-    Truth = exp(-ScaleParameter(i+1)^2/2) .* SignalOriginal;
-% % % %     Truth = exp(-ScaleParameter(i+1)^2/2) .* cos(Theta) + exp(-9*ScaleParameter(i+1)^2/2) .* sin(3*Theta);
+% % % %     Truth = exp(-ScaleParameter(i+1)^2/2) .* SignalOriginal;
+    Truth = exp(-ScaleParameter(i+1)^2/2) .* cos(Theta) + exp(-9*ScaleParameter(i+1)^2/2) .* sin(3*Theta);
     plot(Theta, Truth,'r--')
     AbsErr(i+1,1) = norm(Truth - SignalAtVertex(:,i+1), inf);
     

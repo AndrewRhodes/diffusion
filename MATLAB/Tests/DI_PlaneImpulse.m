@@ -87,23 +87,64 @@ for MC = 1 : length(MCporder)
     % If using Gaussian implicit surface diffusion, p=3 causes negative values
     % porder = 4
     
+    NumPointSurf = length(1:eSS:MaxSurfSize+(1/eSS -1)*eSS);
+    MiddleSurfPoint = round(NumPointSurf/2);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Setup File Name Directions
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    FileLocation = '../models/Plane/';
+    FileName = strcat('Plane','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.off');
+    
+    FileLocationCP = '../models/Plane/CPLaplace/';
+    FileNameIJK = strcat('IJK','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    FileNameCP = strcat('CP','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    FileNameCPFACE = strcat('CPFACE','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    
+    FileNameL = strcat('L','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    FileNameEplot = strcat('Eplot','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    FileNameEcp = strcat('Ecp','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    FileNameM = strcat('M','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    
+    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Create Explicit 3D Surface, Laplace-Beltrami, diffusion for impulse
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     
-    NumPointSurf = length(1:eSS:MaxSurfSize+(1/eSS -1)*eSS);
-    MiddleSurfPoint = round(NumPointSurf/2);
     
-    [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
+    if ~exist(fullfile(FileLocation, FileName), 'file')
+        
+        [PointCloud.Location, PointCloud.Face] = icosphere(NumberDivisions);
+        
+        save_off(PointCloud.Location, PointCloud.Face, fullfile(FileLocation, FileName))
+        
+        
+        [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
+
+        
+    else
+        
+        [PointCloud.Location, PointCloud.Face] = read_off(fullfile(FileLocation, FileName));
+        
+        [m, n] = size(PointCloud.Location);
+        if m < n
+            PointCloud.Location = PointCloud.Location';
+        end
+        
+        [m, n] = size(PointCloud.Face);
+        if m < n
+            PointCloud.Face = PointCloud.Face';
+        end
+        
+    end
     
     PointCloudCenter = sub2ind([NumPointSurf, NumPointSurf], MiddleSurfPoint, MiddleSurfPoint);
-    
-    PointCloud.Location = [xSurf3D(:), ySurf3D(:), zSurf3D(:)];
     PointCloud.LocationCount = length(PointCloud.Location);
-    PointCloud.Face = delaunay(xSurf3D(:), ySurf3D(:));
     PointCloud.FaceCount = length(PointCloud.Face);
+
     PointCloud.FaceArea = findFaceArea(PointCloud.Location, PointCloud.Face);
     PointCloud.Signal = zeros(PointCloud.LocationCount,1);
     PointCloud.Signal(PointCloudCenter,1) = 1;
@@ -130,18 +171,15 @@ for MC = 1 : length(MCporder)
     y1d = (MinPoint(2):spacing:MaxPoint(2))';
     z1d = (MinPoint(3):spacing:MaxPoint(3))';
     
-    FileLocationCP = '../models/Plane/CP/';
-    FileNameIJK = strcat('IJK','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-    FileNameCP = strcat('CP','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-    FileNameCPFACE = strcat('CPFACE','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    
     
     if ~exist(fullfile(FileLocationCP,FileNameIJK), 'file')
         
         [IJK,DIST,CP,XYZ,CPFACE] = tri2cp(PointCloud.Face, PointCloud.Location, spacing, MinPoint, porder, Lorder/2);
         
-        save(fullfile(FileLocationCP, FileNameIJK), 'IJK')
-        save(fullfile(FileLocationCP, FileNameCP), 'CP')
-        save(fullfile(FileLocationCP, FileNameCPFACE), 'CPFACE')
+        save(fullfile(FileLocationCP, FileNameIJK), 'IJK', '-v7.3')
+        save(fullfile(FileLocationCP, FileNameCP), 'CP', '-v7.3')
+        save(fullfile(FileLocationCP, FileNameCPFACE), 'CPFACE', '-v7.3')
         
     else
         
@@ -150,13 +188,7 @@ for MC = 1 : length(MCporder)
         load(fullfile(FileLocationCP, FileNameCPFACE))
         
     end
-    
-    
-    % MinXYZ = min(XYZ);
-    % MaxXYZ = max(XYZ);
-    % MinIJK = min(IJK);
-    % MaxIJK = max(IJK);
-    
+      
     
     
     % XYZ = MinPoint - spacing + IJK * spacing
@@ -165,10 +197,7 @@ for MC = 1 : length(MCporder)
     
     Band = sub2ind(BandSearchSize, IJK(:,1), IJK(:,2), IJK(:,3));
     
-    FileNameL = strcat('L','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-    FileNameEplot = strcat('Eplot','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-    FileNameEcp = strcat('Ecp','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-    FileNameM = strcat('M','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
+    
     
     if ~exist(fullfile(FileLocationCP, FileNameL), 'file')
         

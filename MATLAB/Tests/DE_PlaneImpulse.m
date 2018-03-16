@@ -80,13 +80,28 @@ for MC = 1 : length(MCeSS)
     % porder = 4
     
     
+    NumPointSurf = length(1:eSS:MaxSurfSize+(1/eSS -1)*eSS);
+    MiddleSurfPoint = round(NumPointSurf/2);
+    
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Setup File Name Directions
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    FileLocation = '../models/Plane/';
+    FileName = strcat('Plane','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.off');
+    
+    FileLocationMeshLP = '../models/Plane/meshLP/';
+    FileNameLapMat = strcat('LapMatMeshWeights','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
+    FileNameArea = strcat('Area','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
+    FileNamehEdge = strcat('hEdge2','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
+    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Create Explicit 3D Surface, Laplace-Beltrami, diffusion for impulse
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    
-    NumPointSurf = length(1:eSS:MaxSurfSize+(1/eSS -1)*eSS);
-    MiddleSurfPoint = round(NumPointSurf/2);
+   
     
     [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
     
@@ -103,9 +118,6 @@ for MC = 1 : length(MCeSS)
     
     
     
-    FileLocation = '../models/Plane/';
-    FileName = strcat('Plane','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.off');
-    
     
     if ~exist(fullfile(FileLocation, FileName), 'file')
         save_off(PointCloud.Location, PointCloud.Face, fullfile(FileLocation, FileName))
@@ -113,10 +125,7 @@ for MC = 1 : length(MCeSS)
     
     % save_off(PointCloud.Location, PointCloud.Face, strcat('Plane',num2str(NumPointSurf),'.off'));
     
-    FileLocationMeshLP = '../models/Plane/meshLP/';
-    FileNameLapMat = strcat('LapMatMeshWeights','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
-    FileNameArea = strcat('Area','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
-    FileNamehEdge = strcat('hEdge2','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
+    
     
     if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
         
