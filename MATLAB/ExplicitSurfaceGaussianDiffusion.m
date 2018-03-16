@@ -24,13 +24,13 @@ addpath('models/')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-NumSteps = 50;
+NumSteps = 500;
 
 MaxImageSize = [30 30];
 MiddleImage = MaxImageSize / 2;
 
 
-eSS = 1; % Explicit Surface Spacing
+eSS = 0.5; % Explicit Surface Spacing
 MaxSurfSize = [30 30];
 
 
@@ -57,7 +57,7 @@ PointCloud = findMeshResolution(PointCloud, 'Model');
 AverageEdgeLength = findAverageEdgeLengths(PointCloud.Location, PointCloud.Face, 1);
 
 tic
-G = makeMeshGaussian(PointCloud, AverageEdgeLength, 4*sqrt(2)*AverageEdgeLength, 1);
+G = makeMeshGaussian(PointCloud, AverageEdgeLength, 6*sqrt(2)*AverageEdgeLength, 1);
 toc
 
 
@@ -110,9 +110,11 @@ for i = 1 : NumSteps
     hold on
     axis([0 20 0 2*max(SignalExplicit(:,i))])
     
-    t = (i-1) * AverageEdgeLength^2;
+    t = (i-1) * AverageEdgeLength^2 * median(PointCloud.VertexArea)^(1/3)
+%     t = (i-1) * ((AverageEdgeLength)/median(PointCloud.VertexArea)^(2/3))^2  ; %((AverageEdgeLength^(2/3))*median(PointCloud.VertexArea)^(1/3))
+
     sqrt(t)
-%     t = 44
+%     t = 4
     
     Gauss = exp(-(xgauss.^2) / (2*t));
     Gauss = Gauss * max(SignalExplicit(:,i));

@@ -38,10 +38,10 @@ MiddleImage = MaxImageSize / 2;
 
 
 % 3D explcit surface diffusion
-eSS = 1; % Explicit Surface Spacing
+eSS = 0.25; % Explicit Surface Spacing
 MaxSurfSize = 30;
 
-
+alpha = 1;
 % 3D implicit surface
 spacing = 0.25;
 sigma = 0.25;
@@ -113,6 +113,7 @@ for i = 1 : MaxLevel -1
     clf
     i
     t2 = (i-1) * tau2D^2
+    sqrt(t2)
     
     Gaus = exp( -(xgauss.^2) / (2*t2) );
     Gaus = Gaus  * max(max(Signal2D(:,:,i)));
@@ -203,10 +204,12 @@ PointCloud = findMeshResolution(PointCloud, 'Model');
 % [LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('Plane120.off');
 hEdge = (hEdge2/2);
 % tauExplicit = 0.5*hEdge^2;
-tauExplicit = hEdge/4;
+% tauExplicit = hEdge/4;
+tauExplicit = tauImplicit;
 
-MaxTauExplicit  = 40;
-NumStepsExplcit = round(MaxTauExplicit / tauExplicit);
+MaxTauExplicit  = 5^2;
+
+NumStepsExplcit = round(MaxTauExplicit / (2*tauExplicit) + 1);
 
 A1 = sparse(1:length(Area),1:length(Area), 1./Area);
 
@@ -245,9 +248,8 @@ end
 
 
 
-ScaleParameterSpatial = findScaleParamter(tauExplicit, NumStepsExplcit, 1, 3);
-
-
+ScaleParameterSpatialExplicit1 = findScaleParamter(tauExplicit, alpha, NumStepsExplcit, 1, 3);
+ScaleParameterSpatialExplicit2 = findScaleParamter(tauExplicit, alpha, NumStepsExplcit, 2, 3);
 
 
 
@@ -255,65 +257,65 @@ ScaleParameterSpatial = findScaleParamter(tauExplicit, NumStepsExplcit, 1, 3);
 % ScaleParameterSpatial(i,1)
 % sqrt(2*tauExplicit*i)
 
-
+ErrorDE = zeros(NumStepsExplcit,1);
 RadialDist3D = sqrt(sum(bsxfun(@minus, PointCloud.Location, PointCloud.Location(PointCloudCenter,:)).^2,2));
 
-xgauss = 0:0.01:20;
+xgauss = 0:0.01:15;
 for i = 1 : NumStepsExplcit
     clf
     plot(RadialDist3D, SignalExplicit(:,i),'r.')
     hold on
     axis([0 10 0 2*max(SignalExplicit(:,i))])
-    Gauss = exp(-(xgauss.^2) / (2*ScaleParameterSpatial(i)^2));
+    Gauss = exp(-(xgauss.^2) / (2*ScaleParameterSpatialExplicit1(i)^2));
     Gauss = Gauss * max(SignalExplicit(:,i));
     plot(xgauss, Gauss,'b-')
     
-    Gauss2 = exp(-(xgauss.^2) / (2*ScaleParameterSpatial2(i)^2));
-    Gauss2 = Gauss2 * max(SignalExplicit(:,i));
-    plot(xgauss, Gauss2,'g:')
+    ErrorGauss = exp(-RadialDist3D.^2 / (2*ScaleParameterSpatialExplicit2(i)^2));
+    ErrorGauss = ErrorGauss * max(SignalExplicit(:,i));
     
-    i
-    ScaleParameterSpatial(i)^2
-    ScaleParameterSpatial2(i)^2
+    ErrorDE(i) = sqrt(sum(bsxfun(@minus, ErrorGauss, SignalExplicit(:,i)).^2));
+
     t = (i-1)*2*tauExplicit
    
     Gauss2 = exp(-(xgauss.^2) / (2*t));
     Gauss2 = Gauss2 * max(SignalExplicit(:,i));
     plot(xgauss, Gauss2,'k:')
     
-    pause
+%     pause
 end
 
-% scale^2 = [8 16 35]
+
 % eSS = 1, t=h/4 [15 29 63]
-% eSS = 0.5, t=h/4 [29 57 124]
-% eSS = 0.25 t=h/4 [58 113 247]
 
-% [7 23 67]
-
-% [3 10 28]
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Figures for paper %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 RadialDist3D = sqrt(sum(bsxfun(@minus, PointCloud.Location, PointCloud.Location(PointCloudCenter,:)).^2,2));
 
-xgauss = 0:0.01:20;
-% eSS = 1, t=h/4 [15 29 63]
-% eSS = 0.5, t=h/4 [29 57 124]
-% eSS = 0.25 t=h/4 [58 113 247]
-for i = [58 113 247]
+xgauss = 0:0.01:15;
+% eSS = 1, eSS = 0.5, t=0.75 [15 29 63]
+for i = [5,15,35]
     
     figure
     plot(RadialDist3D, SignalExplicit(:,i),'r.','markersize',30)
     hold on
-%     axis([0 10 0 2*max(SignalExplicit(:,i))])
-    Gauss = exp(-(xgauss.^2) / (2*ScaleParameterSpatial(i)^2));
+
+    Gauss = exp(-(xgauss.^2) / (2*ScaleParameterSpatialExplicit2(i)^2));
     Gauss = Gauss * max(SignalExplicit(:,i));
+    
+    ErrorGauss = exp(-RadialDist3D.^2 / (2*ScaleParameterSpatialExplicit2(i)^2));
+    ErrorGauss = ErrorGauss * max(SignalExplicit(:,i));
+    
+    ErrorDE = sqrt(sum(bsxfun(@minus, ErrorGauss, SignalExplicit(:,i)).^2))
+    
     plot(xgauss, Gauss,'m--','linewidth',3)
     
-    ScaleParameterSpatial(i)^2
-    t = (i-1)*2*tauExplicit
+    
+    ScaleParameterSpatialExplicit1(i)^2
+    ScaleParameterSpatialExplicit2(i)^2
+    
+%     t = (i-1)*2*tauExplicit
    
-    Gauss2 = exp(-(xgauss.^2) / (2*t));
+    Gauss2 = exp(-(xgauss.^2) / (2*ScaleParameterSpatialExplicit1(i)^2));
     Gauss2 = Gauss2 * max(SignalExplicit(:,i));
     plot(xgauss, Gauss2,'b:','linewidth',3)
     xlim([0 10])
@@ -329,7 +331,7 @@ end
 % eSS = 1, t=h/4 [15 29 63]
 % eSS = 0.5, t=h/4 [29 57 124]
 % eSS = 0.25 t=h/4 [58 113 247]
-for i = [58 113 247]
+for i = [5,15,35]
     
     figure
     imshow(reshape(SignalExplicit(:,i), NumPointSurf, NumPointSurf),[])

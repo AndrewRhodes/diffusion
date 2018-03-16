@@ -12,7 +12,7 @@
 
 
 
-function ScaleParameter = findScaleParamter(Step, NumLevels, Method, Dimension)
+function ScaleParameter = findScaleParamter(Step, Alpha, NumLevels, Method, Dimension)
 
 
 
@@ -22,13 +22,13 @@ if Method == 1 % Natural Scale Growth
     
     if Dimension == 2
         
+        ScaleParameter = sqrt((0:NumLevels)' * Step^2);
+        
     elseif Dimension == 3
         
-        for i = 1 : NumLevels - 1
-            
-            ScaleParameter(i+1,1) = sqrt(2 * i * Step);
-            
-        end
+        
+        ScaleParameter = sqrt((0:NumLevels)' * 2 * Alpha * Step);
+        
     else
         error('Dimension must be 1 or 2')
     end
@@ -42,7 +42,7 @@ elseif Method == 2 % Cutoff Frequency Method
     db3 = 1/sqrt(2);
     ws2 = (ws.^2)';
     H = ones(NumSample,1) ;
-    h = 1 ./ ( ones(NumSample,1) + Step * ws2 );
+    h = 1 ./ ( ones(NumSample,1) + Alpha * Step * ws2 );
     
     
     for i = 1 : NumLevels -1

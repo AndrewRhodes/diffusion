@@ -51,8 +51,7 @@ NumStepsImplicit = MaxTauImplicit / tauImplicit;
 % Additional Paths
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-addpath('~/AFOSR/MATLAB/')
-addpath('~/Desktop/Ashish/CS3 Code/')
+addpath('~/AFOSR/Ashish/CS3 Code')
 addpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/models/')
 addpath('~/GitProjects/matlab-utilities/')
 addpath('~/GitProjects/mesh_resampling_toolbox/MATLAB_Modules/')
