@@ -5,22 +5,11 @@
 % Diffusion accuracy comparison for a signal on a sphere.
 
 
-% close all
+close all
 clear
 clc
 
-
-%% Additional Paths
-
-addpath('~/GitProjects/matlab-utilities/')
-addpath('~/Desktop/MLIDAR-1.0/MATLAB_Modules/')
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath(genpath('../'))
-addpath('../src/')
-addpath('../data/')
-addpath(genpath('../models/'))
+ProjectRoot = addprojectpaths; % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -45,10 +34,10 @@ NumStepsImplicit = round(MaxTauImplicit); %ceil(MaxTauImplicit / tauImplicit);
 % Setup File Name Directions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-FileLocation = '../models/Sphere/';
+FileLocation = strcat(ProjectRoot,'/models/Sphere/');
 FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
-FileLocationCP = '../models/Sphere/CPLaplace/';
+FileLocationCP = strcat(ProjectRoot,'/models/Sphere/CPLaplace/');
 FileNameIJK = strcat('IJK','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
 FileNameCP = strcat('CP','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
 FileNameCPFACE = strcat('CPFACE','_p',num2str(porder),'_l',num2str(Lorder),'.mat');
@@ -89,7 +78,7 @@ end
 
 Sphere.FaceCount = size(Sphere.Face, 1);
 Sphere.LocationCount = size(Sphere.Location,1);
-Sphere.FaceArea = findFaceAreas(Sphere.Location,Sphere.Face);
+Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
 
 
 
@@ -240,24 +229,6 @@ close(figure(1))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot Errors
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-% AbsErr(MCRun,1) = norm( bsxfun(@minus, mean(SignalOriginal)/2 , SignalAtVertex(:,i)), inf);
-
-
-
-
-
-% end
-
-
-
-% figure
-% loglog(1./SpaceVec, AbsErr)
-
-
-
 
 
 

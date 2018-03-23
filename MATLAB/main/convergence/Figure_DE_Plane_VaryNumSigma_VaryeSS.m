@@ -7,18 +7,7 @@ close all
 clear
 clc
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Additional Paths
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% cd ~/Desktop/Ashish/'CS3 Code'/
-addpath(genpath('~/Documents/Software/MeshLP/'))
-addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath(genpath('../'))
-addpath('../src/')
-addpath('../data/')
-addpath(genpath('../models/'))
+ProjectRoot = addprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -78,10 +67,10 @@ for MCe = 1 : length(MCeSS)
     % Setup File Name Directions
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    FileLocation = '../models/Plane/';
+    FileLocation = strcat(ProjectRoot,'/models/Plane/');
     FileName = strcat('Plane','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.off');
     
-    FileLocationMeshLP = '../models/Plane/meshLP/';
+    FileLocationMeshLP = strcat(ProjectRoot,'/models/Plane/meshLP/');
     FileNameLapMat = strcat('LapMatMeshWeights','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'_NumSigma',num2str(options.rho),'.mat');
     FileNameArea = strcat('Area','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'_NumSigma',num2str(options.rho),'.mat');
     FileNamehEdge = strcat('hEdge2','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'_NumSigma',num2str(options.rho),'.mat');

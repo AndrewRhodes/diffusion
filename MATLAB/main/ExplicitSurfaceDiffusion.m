@@ -7,15 +7,7 @@ close all
 clear
 clc
 
-
-
-
-%% Additional Paths
-
-addpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/models/')
-addpath('~/GitProjects/matlab-utilities/')
-addpath('~/Desktop/MLIDAR-1.0/MATLAB_Modules/')
-addpath('~/AFOSR/Ashish/CS3 Code/')
+addprojectpaths % Additional Paths
 
 
 %% Load Model

@@ -7,17 +7,7 @@ close all
 clear
 clc
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Additional Paths
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% cd ~/Desktop/Ashish/'CS3 Code'/
-addpath(genpath('~/Documents/Software/MeshLP/'))
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath(genpath('../'))
-addpath('../src/')
-addpath('../data/')
-addpath(genpath('../models/'))
+ProjectRoot = addprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria

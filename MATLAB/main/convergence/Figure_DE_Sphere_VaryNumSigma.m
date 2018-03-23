@@ -7,17 +7,7 @@ close all
 clear
 clc
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Additional Paths
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% cd ~/Desktop/Ashish/'CS3 Code'/
-addpath(genpath('~/Documents/Software/MeshLP/'))
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath(genpath('../'))
-addpath('../src/')
-addpath('../data/')
-addpath(genpath('../models/'))
+ProjectRoot = addprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -30,7 +20,7 @@ MCError = zeros(length(MCdiv), 2, length(MCrho));
 MCErrorAll = cell(length(MCdiv), length(MCrho));
 
 for MCr = 1 : length(MCrho)
-    
+   
 for MCd = 1 : length(MCdiv)
     
     clearvars -except MCr MCd MCdiv MCrho MCErrorAll MCError
@@ -50,10 +40,10 @@ alpha = 1;
 % Setup File Name Directions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-FileLocation = '../models/Sphere/';
+FileLocation = strcat(ProjectRoot,'/models/Sphere/');
 FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
-FileLocationMeshLP = '../models/Sphere/meshLP/';
+FileLocationMeshLP = strcat(ProjectRoot,'/models/Sphere/meshLP/');
 FileNameLapMat = strcat('LapMatMeshWeights','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 FileNameArea = strcat('Area','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');

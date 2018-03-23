@@ -9,18 +9,7 @@
 clear
 clc
 
-
-%% Additional Paths
-
-addpath('~/GitProjects/matlab-utilities/')
-addpath('~/Desktop/MLIDAR-1.0/MATLAB_Modules/')
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath(genpath('../'))
-addpath('../src/')
-addpath('../data/')
-addpath(genpath('../models/'))
+addprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria

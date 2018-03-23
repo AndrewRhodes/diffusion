@@ -7,11 +7,7 @@ close all
 clear
 clc
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Additional Paths
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-addprojectpaths
+ProjectRoot = addprojectpaths % Additional Paths
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -62,10 +58,10 @@ for MCp = 1 : length(MCporder)
         % Setup File Name Directions
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        FileLocation = '../models/Plane/';
+        FileLocation = strcat(ProjectRoot,'/models/Plane/');
         FileName = strcat('Plane','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.off');
         
-        FileLocationCP = '../models/Plane/CPLaplace/';
+        FileLocationCP = strcat(ProjectRoot,'/models/Plane/CPLaplace/');
         FileNameIJK = strcat('IJK','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
         FileNameCP = strcat('CP','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
         FileNameCPFACE = strcat('CPFACE','_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
