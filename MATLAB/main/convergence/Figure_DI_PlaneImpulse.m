@@ -7,6 +7,7 @@ close all
 clear
 clc
 
+
 ProjectRoot = addprojectpaths % Additional Paths
 
 
@@ -23,7 +24,7 @@ MCErrorAll = cell(length(MCspacing), length(MCporder));
 for MCp = 1 : length(MCporder)
     for MCs = 1 : length(MCspacing)
         
-        clearvars -except MCp MCs MCporder MCspacing MCError MCErrorAll
+        clearvars -except MCp MCs MCporder MCspacing MCError MCErrorAll ProjectRoot
         warning on
         
         porder = MCporder(MCp)
