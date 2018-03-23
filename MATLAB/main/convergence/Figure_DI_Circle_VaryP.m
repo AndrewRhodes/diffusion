@@ -9,7 +9,7 @@ close all
 clear
 clc
 
-ProjectRoot = addprojectpaths % Additional Paths
+ProjectRoot = setupprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria

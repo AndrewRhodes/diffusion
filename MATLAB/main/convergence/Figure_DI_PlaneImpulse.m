@@ -8,7 +8,7 @@ clear
 clc
 
 
-ProjectRoot = addprojectpaths % Additional Paths
+ProjectRoot = setupprojectpaths % Additional Paths
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
