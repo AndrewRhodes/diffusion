@@ -122,9 +122,6 @@ for MC = 1 : length(MCporder)
         save_off(PointCloud.Location, PointCloud.Face, fullfile(FileLocation, FileName))
         
         
-        [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
-
-        
     else
         
         [PointCloud.Location, PointCloud.Face] = read_off(fullfile(FileLocation, FileName));

@@ -31,7 +31,7 @@ alpha = 1;
 porder = 4; 
 dim = 2;
 Lorder = 2;
-spacing = 0.0025;
+spacing = 1/300;
 bandwidth = 1.00001*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
 
 tauImplicit = spacing / 8;

@@ -28,7 +28,8 @@ addpath(genpath('../models/'))
 % User Defined Criteria
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005, 0.0025];%, 0.001];
+MCspacing = [1/3, 1/9, 1/22, 1/30, 1/90, 1/220, 1/300];
+% MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005, 0.0025];%, 0.001];
 MCporder = [1, 2, 3, 4, 5, 6, 7];
 
 MCError = zeros(length(MCspacing), 2, length(MCporder));
@@ -68,6 +69,7 @@ Radius = ones(size(Theta));
 [xp,yp] = pol2cart(Theta, Radius);
 Circle.Location(:,1) = xp(:);
 Circle.Location(:,2) = yp(:);
+% Circle.Location(:,3) = zeros(size(yp(:)));
 Circle.LocationCount = length(Circle.Location);
 
 
@@ -82,10 +84,15 @@ Circle.Signal = SignalOriginal;
 % Construct the Laplace Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-x1d = (-5:spacing:5)';
-y1d = x1d;
+MinPoint = (min(Circle.Location) - bandwidth - spacing);
+MaxPoint = (max(Circle.Location) + bandwidth + spacing);
+
+x1d = (MinPoint(1):spacing:MaxPoint(1))';
+y1d = (MinPoint(2):spacing:MaxPoint(2))';
+% z1d = (MinPoint(3):spacing:MaxPoint(3))';
 
 [GridX, GridY] = meshgrid(x1d, y1d);
+% [GridX, GridY, GridZ] = meshgrid(x1d, y1d, z1d);
 
 [CP(:,1), CP(:,2), dist] = cpCircle(GridX(:), GridY(:));
 
@@ -172,22 +179,24 @@ SignalAtVertex(:,1) = SignalOriginal;
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsImplicit-1));
 AbsErr = zeros(NumStepsImplicit,1);
 
+NumIter = min(length(band),100);
+
 % figure(1)
 for i = 1 : NumStepsImplicit - 1
   
-    if i == 1
-%         Signal(:,i+1) = ItM \ Signal(:,i);
-        [Signal(:,i+1), flag] = gmres(ItM, Signal(:,i), [], 1e-10, 100);
-    elseif i == 2
-%         Signal(:,i+1) = I23tM \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
-        [Signal(:,i+1), flag] = gmres(I23tM, (4/3)*Signal(:,i) - (1/3)*Signal(:,i-1), [], 1e-10, 100);
-    elseif i == 3
-%         Signal(:,i+1) = I611M \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
-        [Signal(:,i+1), flag] = gmres(I611M, (18/11)*Signal(:,i) - (9/11)*Signal(:,i-1) + (2/11)*Signal(:,i-2), [], 1e-10, 100);    
-    else
-%         Signal(:,i+1) = I1225M \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
-        [Signal(:,i+1), flag] = gmres(I1225M, (48/25)*Signal(:,i)-(36/25)*Signal(:,i-1) + (16/25)*Signal(:,i-2) - (3/25)*Signal(:,i-3), [], 1e-10, 100);    
-    end
+%     if i == 1
+        Signal(:,i+1) = ItM \ Signal(:,i);
+%         [Signal(:,i+1), flag] = gmres(ItM, Signal(:,i), [], 1e-10, NumIter);
+%     elseif i == 2
+% %         Signal(:,i+1) = I23tM \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
+%         [Signal(:,i+1), flag] = gmres(I23tM, (4/3)*Signal(:,i) - (1/3)*Signal(:,i-1), [], 1e-10, NumIter);
+%     elseif i == 3
+% %         Signal(:,i+1) = I611M \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
+%         [Signal(:,i+1), flag] = gmres(I611M, (18/11)*Signal(:,i) - (9/11)*Signal(:,i-1) + (2/11)*Signal(:,i-2), [], 1e-10, NumIter);    
+%     else
+% %         Signal(:,i+1) = I1225M \ ((4/3)*Signal(:,i) - (1/3)*Signal(:,i-1));
+%         [Signal(:,i+1), flag] = gmres(I1225M, (48/25)*Signal(:,i)-(36/25)*Signal(:,i-1) + (16/25)*Signal(:,i-2) - (3/25)*Signal(:,i-3), [], 1e-10, NumIter);    
+%     end
     
     SignalAtVertex(:,i+1) = Eplot * Signal(:,i+1);
     

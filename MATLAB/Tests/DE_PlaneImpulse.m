@@ -67,7 +67,7 @@ for MC = 1 : length(MCeSS)
     MaxTauImplicit = 5^2;
     NumStepsImplicit = round(MaxTauImplicit / (2*tauImplicit) + 1);
     
-    
+	ShowPlot = 1;
     
     % 3D explicit surface (DE)
     % eSS = 1; % Explicit Surface Spacing
@@ -96,20 +96,41 @@ for MC = 1 : length(MCeSS)
     FileNameArea = strcat('Area','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
     FileNamehEdge = strcat('hEdge2','_eSS',num2str(eSS),'_',num2str(NumPointSurf),'.mat');
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Create Explicit 3D Surface
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Create Explicit 3D Surface, Laplace-Beltrami, diffusion for impulse
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-   
     
-    [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
+    if ~exist(fullfile(FileLocation, FileName), 'file')
+        
+        [xSurf3D, ySurf3D, zSurf3D] = ndgrid(1:eSS:MaxSurfSize+(1/eSS -1)*eSS,1:eSS:MaxSurfSize+(1/eSS -1)*eSS,0);
+        
+        PointCloud.Location = [xSurf3D(:), ySurf3D(:), zSurf3D(:)];
+        PointCloud.Face = delaunay(xSurf3D(:), ySurf3D(:));
+        
+        save_off(PointCloud.Location, PointCloud.Face, fullfile(FileLocation, FileName))
+        
+        
+    else
+        
+        [PointCloud.Location, PointCloud.Face] = read_off(fullfile(FileLocation, FileName));
+        
+        [m, n] = size(PointCloud.Location);
+        if m < n
+            PointCloud.Location = PointCloud.Location';
+        end
+        
+        [m, n] = size(PointCloud.Face);
+        if m < n
+            PointCloud.Face = PointCloud.Face';
+        end
+        
+    end
     
     PointCloudCenter = sub2ind([NumPointSurf, NumPointSurf], MiddleSurfPoint, MiddleSurfPoint);
     
-    PointCloud.Location = [xSurf3D(:), ySurf3D(:), zSurf3D(:)];
     PointCloud.LocationCount = length(PointCloud.Location);
-    PointCloud.Face = delaunay(xSurf3D(:), ySurf3D(:));
     PointCloud.FaceCount = length(PointCloud.Face);
     PointCloud.FaceArea = findFaceArea(PointCloud.Location, PointCloud.Face);
     PointCloud.Signal = zeros(PointCloud.LocationCount,1);
@@ -117,14 +138,9 @@ for MC = 1 : length(MCeSS)
     PointCloud = findMeshResolution(PointCloud, 'Model');
     
     
-    
-    
-    if ~exist(fullfile(FileLocation, FileName), 'file')
-        save_off(PointCloud.Location, PointCloud.Face, fullfile(FileLocation, FileName))
-    end
-    
-    % save_off(PointCloud.Location, PointCloud.Face, strcat('Plane',num2str(NumPointSurf),'.off'));
-    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Create Laplace-Beltrami
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
     
     
     if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
@@ -145,82 +161,68 @@ for MC = 1 : length(MCeSS)
     % [LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('Plane120.off');
     hEdge = (hEdge2/2);
     
-    
     A1 = sparse(1:length(Area),1:length(Area), 1./Area);
     
     LBM = A1 * LapMatMeshWeights;
     
-    ItL = speye(length(Area),length(Area)) - tauExplicit * LBM;
+    ItL = speye(length(Area),length(Area)) - alpha*tauExplicit * LBM;
     
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Create Scale Paramter
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ScaleParameterSpatialExplicit = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
+    
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Perform Diffusion and Error Analysis
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+	RadialDist3D = sqrt(sum(bsxfun(@minus, PointCloud.Location, PointCloud.Location(PointCloudCenter,:)).^2,2));
+	GaussLocation = 0:0.01:max(PointCloud.Location)/2;
+    if ShowPlot
+        figure(1)
+    end    
+       
     SignalExplicit = zeros(PointCloud.LocationCount, NumStepsExplicit);
     SignalExplicit(:,1) = PointCloud.Signal;
     
     
     WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplicit-1));
-    
+
     for i = 1 : NumStepsExplicit - 1
         
         [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), 1e-10, 60);
         if flag
-            flag
+            disp(flag)
         end
         
         waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
+        
+        % Calculate Error
+        TruthGauss = exp(-RadialDist3D.^2 / (2*ScaleParameterSpatialExplicit(i)^2));
+        TruthGauss = TruthGauss * max(SignalExplicit(:,i));
+        
+        MCErrorDE(i,MC) = norm(TruthGauss - SignalExplicit(:,i), inf);
+        
+        % Show the plot
+        if ShowPlot
+            clf
+            Gauss = exp(-GaussLocation.^2 / (2*ScaleParameterSpatialExplicit(i)^2));
+            Gauss = Gauss * max(SignalExplicit(:,i));
+            plot(GaussLocation, Gauss,'k')
+            hold on
+            plot(RadialDist3D, SignalExplicit(:,i),'r.')
+            axis([0 10 0 2*max(SignalExplicit(:,i))])
+        end
+        
         
     end
     
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
     close(WaitBar)
-    
-    
-    
-    % for i = 1 : NumStepsExplcit
-    %
-    %     imshow(reshape(SignalExplicit(:,i), NumPointSurf, NumPointSurf),[])
-    %
-    %
-    % end
-    
-    
-    
-    ScaleParameterSpatialExplicit1 = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
-    ScaleParameterSpatialExplicit2 = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 2, 3);
-    
-    
-    
-    % tauExplicit = (hEdge/2)^2;
-    % ScaleParameterSpatial(i,1)
-    % sqrt(2*tauExplicit*i)
-    
-    RadialDist3D = sqrt(sum(bsxfun(@minus, PointCloud.Location, PointCloud.Location(PointCloudCenter,:)).^2,2));
-%     xgauss = 0:0.01:15;
-    
-    for i = 1 : NumStepsExplicit
-        %     clf
-        %     plot(RadialDist3D, SignalExplicit(:,i),'r.')
-        %     hold on
-        %     axis([0 10 0 2*max(SignalExplicit(:,i))])
-        %     Gauss = exp(-(xgauss.^2) / (2*ScaleParameterSpatialExplicit1(i)^2));
-        %     Gauss = Gauss * max(SignalExplicit(:,i));
-        %     plot(xgauss, Gauss,'b-')
-        
-        ErrorGauss = exp(-RadialDist3D.^2 / (2*ScaleParameterSpatialExplicit2(i)^2));
-        ErrorGauss = ErrorGauss * max(SignalExplicit(:,i));
-        
-%         MCErrorDE(i,MC) = sqrt(sum(bsxfun(@minus, ErrorGauss, SignalExplicit(:,i)).^2));
-
-        MCErrorDE(i,MC) = norm(ErrorGauss - SignalExplicit(:,i), inf);
-        
-     
-        
-        %     t = (i-1)*2*tauExplicit
-        %
-        %     Gauss2 = exp(-(xgauss.^2) / (2*t));
-        %     Gauss2 = Gauss2 * max(SignalExplicit(:,i));
-        %     plot(xgauss, Gauss2,'k:')
-        
-        %     pause
-    end
+    close(figure(1))
     
     
     
