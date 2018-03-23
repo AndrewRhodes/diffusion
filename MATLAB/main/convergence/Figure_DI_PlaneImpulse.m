@@ -7,7 +7,7 @@ close all
 clear
 clc
 
-
+addpath('../../src/')
 ProjectRoot = setupprojectpaths % Additional Paths
 
 
