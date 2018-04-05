@@ -19,7 +19,7 @@ for iDegreeL = 0 : MaxDegreeL-1
     
     Coef = zeros(iDegreeL+1, 1);
     CoefExp = zeros(iDegreeL+1,LengthTheta);
-
+%     CoefCos = zeros(iDegreeL+1,LengthTheta);
     
     for iOrderM = 0 : iDegreeL
         
@@ -32,9 +32,11 @@ for iDegreeL = 0 : MaxDegreeL-1
     
     Plm = legendre(iDegreeL, cos(Theta));
     Ylm{iDegreeL+1, 1} = (Coef.*ones(iDegreeL+1, LengthTheta)) .* Plm .* CoefExp ;
+%     Ylm{iDegreeL+1, 1} = sqrt(2) * (Coef.*ones(iDegreeL+1, LengthTheta)) .* Plm .* CoefCos ;
     
 end
 
 SphericalHarmonic = cellfun(@real, Ylm, 'UniformOutput', 0);
+% SphericalHarmonic = Ylm;
 
 end
