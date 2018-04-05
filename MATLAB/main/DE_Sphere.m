@@ -29,6 +29,7 @@ options.dtype = 'geodesic';
 FileLocation = '../models/Sphere/';
 FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
+ShowPlot = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Make the Sphere and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,7 +84,7 @@ SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.
 
 % Define the signal
 
-ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2).*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
+ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2)*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
 
 % % ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, cellfun(@times, num2cell( (exp(-(1:MaxDegreeL).*((1:MaxDegreeL)+1)*sigma^2/2)')), num2cell( (exp(-(1:MaxDegreeL).^2/9))' ), 'UniformOutput', 0), SignalOriginal, 'UniformOutput', 0)),1);
 
@@ -148,8 +149,11 @@ AbsErr = zeros(NumStepsExplicit,1);
 
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplicit-1));
-figure
-for i = 2 : NumStepsExplicit - 1
+if ShowPlot
+    figure
+end
+
+for i = 1 : NumStepsExplicit - 1
     
 % %     if i ==1
 % %     SignalExplicit(:,i+1) = ItL \ SignalExplicit(:,i);
@@ -166,11 +170,13 @@ for i = 2 : NumStepsExplicit - 1
     Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), SphericalHarmonic, MaxDegreeL);
 	AbsErr(i+1,1) = norm(Truth(:,i+1) - SignalExplicit(:,i+1), inf);
     
-    clf
-    plot(Sphere.Theta, SignalOriginal,'ko')
-    hold on
-    plot(Sphere.Theta, Truth(:,i), 'gd')
-    plot(Sphere.Theta, SignalExplicit(:,i),'r.')
+    if ShowPlot
+        clf
+        plot(Sphere.Theta, SignalOriginal,'ko')
+        hold on
+        plot(Sphere.Theta, Truth(:,i), 'gd')
+        plot(Sphere.Theta, SignalExplicit(:,i),'r.')
+    end
     
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
     
@@ -178,18 +184,15 @@ end
 
 waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
 close(WaitBar)
-close(figure)
+if ShowPlot
+    close(figure)
+end
 
 
 % MCError(MCs, 1:2, MCp) = [NumStepsImplicit, AbsErr(NumStepsImplicit - 1)];
 % MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
 
 
-figure
-loglog(1:NumStepsExplicit, AbsErr)
-
-figure
-plot(1:NumStepsExplicit, AbsErr)
 
 
 

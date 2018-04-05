@@ -20,18 +20,19 @@ ProjectRoot = setupprojectpaths; % Additional Paths
 NumberDivisions = 3;
 alpha = 1;
 
-porder = 5; 
-dim = 3;
-Lorder = 2;
-spacing = 0.1;
+MaxDegreeL = 100;
+
+porder = 5; % order of interpolation
+dim = 3; % dimension
+Lorder = 2; % Cartesian Laplace order
+spacing = 0.1; % spacing of embedding grid
 bandwidth = 1.002*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
 
-tauImplicit = spacing / 8;
+tauImplicit = spacing / 8; % time step
 MaxTauImplicit = 1/spacing;
 NumStepsImplicit = round(MaxTauImplicit); %ceil(MaxTauImplicit / tauImplicit);
 
-ExactSignal = @(sigma, theta) exp(-sigma^2/2) .* cos(theta);
-
+ShowPlot = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup File Name Directions
@@ -64,9 +65,18 @@ Sphere.Location(:,2) = yp(:);
 Sphere.Location(:,3) = zp(:);
 Sphere.LocationCount = length(Sphere.Location);
 
+
+
 [Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3));
-Sphere.Theta = Sphere.Theta + pi;
-SignalOriginal = ExactSignal(0, Sphere.Theta);
+
+SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.Phi );
+
+
+% Define the signal
+ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2).*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
+
+
+SignalOriginal = ExactSignal(0, SphericalHarmonic, MaxDegreeL);
 Sphere.Signal = SignalOriginal;
 
 
@@ -137,8 +147,9 @@ CPIn = R*CPOut;
 
 [CPTheta, CPPhi, CPRadius] = cart2sph(CPIn(:,1), CPIn(:,2), CPIn(:,3));
 
-CPTheta = CPTheta + pi;
-CPSignal = ExactSignal(0, CPTheta); 
+SphericalHarmonicCP = makeRealSphericalHarmonic( MaxDegreeL, CPTheta, CPPhi );
+
+CPSignal = ExactSignal(0, SphericalHarmonicCP, MaxDegreeL);
 
 
 
@@ -161,15 +172,7 @@ I23tM = speye(size(M)) - (2/3)*alpha*tauImplicit * M;
 % Scale Parameter Estimation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-ScaleParameter = zeros(NumStepsImplicit,1);
-
-for i = 1 : NumStepsImplicit - 1
-   
-%     ScaleParameter(i+1,1) = sqrt(2*alpha*i*tauImplicit);
-    ScaleParameter(i+1,1) = sqrt(2*alpha*i*tauImplicit);
-
-end
+ScaleParameter = findScaleParamter(tauImplicit, alpha, NumStepsImplicit, 1, 3);
 
 
 
@@ -187,7 +190,10 @@ AbsErr = zeros(NumStepsImplicit,1);
 
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsImplicit-1));
-figure(1)
+if ShowPlot
+    figure(1)
+end
+
 for i = 1 : NumStepsImplicit - 1
     
 %     if i == 1
@@ -197,20 +203,27 @@ for i = 1 : NumStepsImplicit - 1
 %         [Signal(:,i+1), flag] = gmres(I23tM, (4/3)*Signal(:,i) - (1/3)*Signal(:,i-1), [], 1e-10, 100);
 %     end
     
+    % Interpolate back to explicit surface
     SignalAtVertex(:,i+1) = Eplot * Signal(:,i+1);
     
     if flag
         disp(flag)
     end
     
-    clf
-    plot(Sphere.Theta, SignalOriginal,'b.')
-    hold on
-    plot(Sphere.Theta, SignalAtVertex(:,i),'ko')
+    % Calculate Truth and Error
+    Truth = ExactSignal(ScaleParameter(i), SphericalHarmonic, MaxDegreeL);
+    AbsErr(i,1) = norm(Truth - SignalAtVertex(:,i), inf);
     
-    Truth = ExactSignal(ScaleParameter(i), Sphere.Theta);
-    plot(Sphere.Theta, Truth,'rs')
-	AbsErr(i,1) = norm(Truth - SignalAtVertex(:,i), inf);
+    
+    if ShowPlot       
+        clf
+        plot(Sphere.Theta, SignalOriginal,'ko')
+        hold on
+        plot(Sphere.Theta, Truth, 'gd')
+        plot(Sphere.Theta, SignalAtVertex(:,i),'r.')
+        legend('Original', 'Truth at i', 'Diffused at i')
+
+    end
    
     waitbar(i/NumStepsImplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsImplicit-1));
     
@@ -218,7 +231,9 @@ end
 
 waitbar(i/NumStepsImplicit, WaitBar, sprintf('Diffusion Complete'));
 close(WaitBar)
-close(figure(1))
+if ShowPlot
+    close(figure(1))
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -227,33 +242,15 @@ close(figure(1))
 
 
 
-AbsErr = zeros(NumStepsImplicit,1);
-RelErr = zeros(NumStepsImplicit,1);
-Truth = zeros(Sphere.LocationCount,1);
-Truth(:,1) = SignalOriginal;
-
-for i = 2 : NumStepsImplicit 
-    
-    Truth(:,i) = exp(-2*ScaleParameter(i,1)) * SignalOriginal;
-
-%     Truth(:,i) = exp(-tauImplicit) * Truth(:,i-1);
-
-%     Truth(:,i) = exp(-(1.5^2)*ScaleParameter(i,1)) * cos(1.5*Phi) + exp(-(3^2)*ScaleParameter(i,1)) * sin(3*Theta);
-
-    AbsErr(i, 1) = norm( Truth(:,i) - SignalAtVertex(:,i), inf);
-    
-% %     RelErr(i, 1) = norm( AbsErr(i, 1), inf) / norm( Truth(:,i), inf);
-% %     RelErr(i, 1) = norm( (Truth(:,i) - Signal(:,i+1)) ./ Truth(:,i), inf);
-    
-end
-
-
-% figure
+figure
 loglog(1:NumStepsImplicit, AbsErr)
 xlabel('Iteration Number')
 ylabel('Relative Error')
 
-hold on
+figure
+plot(1:NumStepsImplicit, AbsErr)
+xlabel('Iteration Number')
+ylabel('Relative Error')
 
 
 
