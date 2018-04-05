@@ -7,6 +7,7 @@ close all
 clear
 clc
 
+addpath('../../src/')
 ProjectRoot = setupprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,7 +24,7 @@ for MCr = 1 : length(MCrho)
    
 for MCd = 1 : length(MCdiv)
     
-    clearvars -except MCr MCd MCdiv MCrho MCErrorAll MCError
+    clearvars -except MCr MCd MCdiv MCrho MCErrorAll MCError ProjectRoot
 
     NumberDivisions = MCdiv(MCd)
     options.rho = MCrho(MCr)
@@ -35,6 +36,10 @@ for MCd = 1 : length(MCdiv)
 options.dtype = 'euclidean';
 
 alpha = 1;
+
+% Spherical Harmonic Settings
+DegreeL = 3;
+OrderM = 3;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup File Name Directions
@@ -51,15 +56,19 @@ FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Make the Sphere and Signal
+% Make the Sphere
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 if ~exist(fullfile(FileLocation, FileName), 'file')
     
-    [Sphere.Location, Sphere.Face] = icosphere(NumberDivisions);
+    [Location, Faces] = icosphere(NumberDivisions);
+    [VerticesOut, FacesOut] = clearMeshDuplicates(Location, Faces );
     
-    save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
+    save_off(VerticesOut, FacesOut, fullfile(FileLocation, FileName))
+    
+    Sphere.Face = FacesOut;
+    Sphere.Location = VerticesOut;
     
 else
     
@@ -81,7 +90,7 @@ end
 
 Sphere.FaceCount = size(Sphere.Face, 1);
 Sphere.LocationCount = size(Sphere.Location,1);
-Sphere.FaceArea = findFaceAreas(Sphere.Location,Sphere.Face);
+Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
 
 Sphere.FaceArea = findFaceArea(Sphere.Location, Sphere.Face);
 Sphere.Signal = zeros(Sphere.LocationCount,1);
@@ -97,37 +106,22 @@ NumStepsExplicit = round(MaxTauExplicit);
 
 
 
-[Theta, Phi, Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Make the Signal
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
 
 
-% [Ymn,THETA,PHI,Xm,Ym,Zm]=spharm(10,10,[length(Theta), length(Phi)],0);
-
-
-L = 10;
-M = 10;
-
-Lmn=legendre(L,cos(Phi));
-
-if L~=0
-  Lmn=squeeze(Lmn(M+1,:,:));
-end
-
-a1=((2*L+1)/(4*pi));
-a2=factorial(L-M)/factorial(L+M);
-C=sqrt(a1*a2);
-
-Ymn=C*Lmn'.*exp(i*M*Theta);
-
-
-
-
+SphericalHarmonic = makeSphericalHarmonic( DegreeL, OrderM, Sphere.Theta, Sphere.Phi);
 
 % Define the signal
-% SignalOriginal = cos(1.5*Phi + pi/2) + sin(2.5*Theta - pi/2);
-% SignalOriginal = cos(Theta);
-SignalOriginal = reshape(real(Ymn),[],1);
+ExactSignal = @(sigma, SignalOriginal, DegreeL) SignalOriginal .* exp(-DegreeL*(DegreeL+1)*sigma^2/2);
 
+SignalOriginal = ExactSignal(0, SphericalHarmonic, DegreeL);
 Sphere.Signal = SignalOriginal;
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construct the Laplace Beltrami
@@ -135,7 +129,7 @@ Sphere.Signal = SignalOriginal;
 
 
 
-if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
+if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file') || ~exist(fullfile(FileLocationMeshLP, FileNameArea), 'file') || ~exist(fullfile(FileLocationMeshLP, FileNamehEdge), 'file')
     
     [LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix(fullfile(FileLocation, FileName), options);
     
@@ -167,14 +161,8 @@ I23tL = speye(Alength, Alength) - (2/3)*alpha*tauExplicit * LBM;
 % Scale Parameter Estimation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% ScaleParameter1 = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
 
-ScaleParameter = zeros(NumStepsExplicit,1);
-for i = 1 : NumStepsExplicit
-   
-    ScaleParameter(i+1,1) = sqrt(2*i^2*alpha*tauExplicit);
-    
-end
+ScaleParameter = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,7 +178,7 @@ AbsErr = zeros(NumStepsExplicit,1);
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplicit-1));
 
-figure(1)
+
 for i = 1 : NumStepsExplicit - 1
     
 %     if i == 1
@@ -200,32 +188,20 @@ for i = 1 : NumStepsExplicit - 1
 %         [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
 %     end
     
-    if flag
-        disp(flag)
-    end
+%     if flag
+%         disp(flag)
+%     end
     
-    clf
-    plot(Theta, SignalOriginal,'b.')
-    hold on
-    plot(Theta, SignalExplicit(:,i),'ko')
-    
-    Truth = exp(-ScaleParameter(i)^2/2) * SignalOriginal;
-% % %     Truth = exp(-ScaleParameter(i)^2/2) .* cos(Theta) + exp(-9*ScaleParameter(i)^2/2) .* sin(3*Theta);
-    plot(Theta, Truth,'rs')
-	AbsErr(i,1) = norm(Truth - SignalExplicit(:,i), inf);
-   
-    
+    Truth = ExactSignal(ScaleParameter(i+1), SphericalHarmonic, DegreeL);
+       
+	AbsErr(i+1,1) = norm(Truth - SignalExplicit(:,i+1), inf);
+        
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
-    if i ==1
-        pause
-    else
-        pause%(0.2)
-    end
 end
 
 waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
 close(WaitBar)
-close(figure(1))
+
 
 
 MCError(MCd, 1:2, MCr) = [NumStepsExplicit, AbsErr(NumStepsExplicit - 1)];

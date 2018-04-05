@@ -30,7 +30,7 @@ end
 
 
 
-if ~exist(strcat(ProjectRoot, '/modles/Sphere'), 'dir')
+if ~exist(strcat(ProjectRoot, '/models/Sphere'), 'dir')
     mkdir(ProjectRoot, 'models/Sphere')
 end
 

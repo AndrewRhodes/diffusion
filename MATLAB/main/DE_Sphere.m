@@ -7,77 +7,97 @@ close all
 clear
 clc
 
-ProjectRoot = addprojectpaths % Additional Paths
+addpath('../src/')
+ProjectRoot = setupprojectpaths % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-MCdiv = [3, 4, 5, 6, 7, 8]
-ErrorAll = zeros
-MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
-
-for MC = 1 : length(MCdiv)
-    clearvars -except MC MCdiv 
-
-    NumberDivisions = MCdiv(MC);
-
     
-    
-FileLocation = '../models/Sphere/';
-FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
 alpha = 1;
+NumberDivisions = 3; % For building Icosphere
 
+% Spherical Harmonics are for defined for l = 1 ... inf, but the 
+% coefficients on higher terms quickly go to zero. 
+MaxDegreeL = 50;
 
-options.rho = 5;
+options.rho = 3;
 options.dtype = 'geodesic';
 % options.dtype = 'euclidean';
+
+FileLocation = '../models/Sphere/';
+FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Make the Sphere and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[Sphere.Location,Sphere.Face] = icosphere(NumberDivisions);
+if ~exist(fullfile(FileLocation, FileName), 'file')
+    
+    [Location, Faces] = icosphere(NumberDivisions);
+    [VerticesOut, FacesOut] = clearMeshDuplicates(Location, Faces );
+    
+    save_off(VerticesOut, FacesOut, fullfile(FileLocation, FileName))
+    
+    Sphere.Face = FacesOut;
+    Sphere.Location = VerticesOut;
+    
+else
+    
+    [Sphere.Location, Sphere.Face] = read_off( fullfile(FileLocation, FileName) );
 
-Sphere.FaceCount = size(Sphere.Face, 1);
+    [m, n] = size(Sphere.Location);
+    if m < n
+        Sphere.Location = Sphere.Location';
+    end
+    
+    [m, n] = size(Sphere.Face);
+    if m < n
+        Sphere.Face = Sphere.Face';
+    end
+    
+end
+
+
 Sphere.LocationCount = size(Sphere.Location,1);
-Sphere.FaceArea = findFaceAreas(Sphere.Location,Sphere.Face);
-
-Sphere.FaceArea = findFaceArea(Sphere.Location, Sphere.Face);
-Sphere.Signal = zeros(Sphere.LocationCount,1);
+Sphere.FaceCount = size(Sphere.Face, 1);
+Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
 Sphere = findMeshResolution(Sphere, 'Model');
 
 
 % % % % % % % % % % 
-tauExplicit = Sphere.Resoltution / 8;
-MaxTauExplicit = 1 / Sphere.Resoltution;
+tauExplicit = Sphere.Resolution / 8;
+MaxTauExplicit = 10 / Sphere.Resolution;
 NumStepsExplicit = round(MaxTauExplicit);
 % % % % % % % % % % 
 
 
-if ~exist(fullfile(FileLocation, FileName), 'file')
-    save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
-end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Make the Signal
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+[Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
 
-[Theta, Phi, Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
+SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.Phi );
 
 % Define the signal
-% SignalOriginal = cos(1.5*Phi + pi/2) + sin(2.5*Theta - pi/2);
-SignalOriginal = cos(Theta);% + sin(2.5*Theta);
 
+ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2).*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
 
+% % ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, cellfun(@times, num2cell( (exp(-(1:MaxDegreeL).*((1:MaxDegreeL)+1)*sigma^2/2)')), num2cell( (exp(-(1:MaxDegreeL).^2/9))' ), 'UniformOutput', 0), SignalOriginal, 'UniformOutput', 0)),1);
+
+SignalOriginal = ExactSignal(0, SphericalHarmonic, MaxDegreeL);
 Sphere.Signal = SignalOriginal;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construct the Laplace Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-FileLocationMeshLP = '../models/Sphere/meshLP/';
-FileNameLapMat = strcat('LapMatMeshWeights','_eSS',num2str(Sphere.Resolution),'_',num2str(Sphere.LocationCount),'.mat');
-FileNameArea = strcat('Area','_eSS',num2str(Sphere.Resolution),'_',num2str(Sphere.LocationCount),'.mat');
-FileNamehEdge = strcat('hEdge2','_eSS',num2str(Sphere.Resoltution),'_',num2str(Sphere.LocationCount),'.mat');
+FileLocationMeshLP = strcat(ProjectRoot,'/models/Sphere/meshLP/');
+FileNameLapMat = strcat('LapMatMeshWeights','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
+FileNameArea = strcat('Area','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
+FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 
 if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
     
@@ -96,7 +116,7 @@ end
 
 hEdge = (hEdge2/2);
 
-Alength = length(A);
+Alength = length(Area);
 
 A1 = sparse(1:Alength, 1:Alength, 1./Area);
 
@@ -119,31 +139,38 @@ ScaleParameter = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-SignalExplicit = zeros(PointCloud.LocationCount, NumStepsExplicit);
-SignalExplicit(:,1) = PointCloud.Signal;
+SignalExplicit = zeros(Sphere.LocationCount, NumStepsExplicit);
+SignalExplicit(:,1) = Sphere.Signal;
+Truth = zeros(Sphere.LocationCount, NumStepsExplicit);
+Truth(:,1) = Sphere.Signal;
 
 AbsErr = zeros(NumStepsExplicit,1);
 
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplicit-1));
-
-for i = 1 : NumStepsExplicit - 1
+figure
+for i = 2 : NumStepsExplicit - 1
     
-    if i ==1
-    %     [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), [], 1e-10, 60);
-    [SignalExplicit(:,i+1), flag] = gmres(ItL, SignalExplicit(:,i), [], 1e-10, 100);
-    else
-        [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
-    end
+% %     if i ==1
+% %     SignalExplicit(:,i+1) = ItL \ SignalExplicit(:,i);
+        [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), 1e-10, 60);
+% %     [SignalExplicit(:,i+1), flag] = gmres(ItL, SignalExplicit(:,i), [], 1e-10, 100);
+% %     else
+% %         [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
+% %     end
     
     if flag
         flag
     end
     
-    Truth = exp(-ScaleParameter(i+1)^2/2) .* SignalOriginal;
+    Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), SphericalHarmonic, MaxDegreeL);
+	AbsErr(i+1,1) = norm(Truth(:,i+1) - SignalExplicit(:,i+1), inf);
     
-	AbsErr(i+1,1) = norm(Truth - SignalExplicit(:,i+1), inf);
-    
+    clf
+    plot(Sphere.Theta, SignalOriginal,'ko')
+    hold on
+    plot(Sphere.Theta, Truth(:,i), 'gd')
+    plot(Sphere.Theta, SignalExplicit(:,i),'r.')
     
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
     
@@ -151,17 +178,18 @@ end
 
 waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
 close(WaitBar)
+close(figure)
 
 
-
-MCError(MCs, 1:2, MCp) = [NumStepsImplicit, AbsErr(NumStepsImplicit - 1)];
-MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
-
+% MCError(MCs, 1:2, MCp) = [NumStepsImplicit, AbsErr(NumStepsImplicit - 1)];
+% MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
 
 
+figure
+loglog(1:NumStepsExplicit, AbsErr)
 
-
-
+figure
+plot(1:NumStepsExplicit, AbsErr)
 
 
 

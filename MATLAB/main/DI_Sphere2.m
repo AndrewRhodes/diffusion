@@ -20,7 +20,7 @@ ProjectRoot = setupprojectpaths; % Additional Paths
 NumberDivisions = 3;
 alpha = 1;
 
-porder = 3; 
+porder = 5; 
 dim = 3;
 Lorder = 2;
 spacing = 0.1;
@@ -30,7 +30,7 @@ tauImplicit = spacing / 8;
 MaxTauImplicit = 1/spacing;
 NumStepsImplicit = round(MaxTauImplicit); %ceil(MaxTauImplicit / tauImplicit);
 
-ExactSignal = @(sigma, theta) exp(-sigma^2/2) * cos(theta);
+ExactSignal = @(sigma, theta) exp(-sigma^2/2) .* cos(theta);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,31 +58,21 @@ FileNameCPIn =strcat('CPIn','_Div',num2str(NumberDivisions),'_s',num2str(spacing
 % Make the Sphere and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% if ~exist(fullfile(FileLocation, FileName), 'file')
-%     
-%     [Sphere.Location, Sphere.Face] = icosphere(NumberDivisions);
-%     
-%     save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
-%     
-% else
-%     
-%     [Sphere.Location, Sphere.Face] = read_off(fullfile(FileLocation, FileName));
-% 
-%     [m, n] = size(Sphere.Location);
-%     if m < n
-%         Sphere.Location = Sphere.Location';
-%     end
-%     
-%     [m, n] = size(Sphere.Face);
-%     if m < n
-%         Sphere.Face = Sphere.Face';
-%     end
-%     
-% end
-% 
-% Sphere.FaceCount = size(Sphere.Face, 1);
-% Sphere.LocationCount = size(Sphere.Location,1);
-% Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
+[xp, yp, zp] = sphere(65);
+Sphere.Location(:,1) = xp(:);
+Sphere.Location(:,2) = yp(:);
+Sphere.Location(:,3) = zp(:);
+Sphere.LocationCount = length(Sphere.Location);
+
+[Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3));
+Sphere.Theta = Sphere.Theta + pi;
+SignalOriginal = ExactSignal(0, Sphere.Theta);
+Sphere.Signal = SignalOriginal;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Construct the Laplace Beltrami
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MinPoint = min(Sphere.Location) - bandwidth - spacing;
 MaxPoint = max(Sphere.Location) + bandwidth + spacing;
@@ -92,131 +82,78 @@ y1d = (MinPoint(2):spacing:MaxPoint(2))';
 z1d = (MinPoint(3):spacing:MaxPoint(3))';
 
 [GridX, GridY, GridZ] = meshgrid(x1d, y1d, z1d);
-[CP(:,1), CP(:,2), CP(:,3), dist] = cpSphere(GridX, GridY, GridZ);
+[CP(:,1), CP(:,2), CP(:,3), dist] = cpSphere(GridX(:), GridY(:), GridZ(:));
 
 
-[Theta, Phi, Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
+BandInit = find(abs(dist) <= bandwidth);
 
-
-SignalOriginal = ExactSignal(0, Theta);
-Sphere.Signal = SignalOriginal;
+CPInit = CP(BandInit, :);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Construct the Laplace Beltrami
+% Matric Construction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder);
+[EcpRow, EcpCol, EcpVal] = find(Ecp);
+BandInner = unique(EcpCol);
+
+L = laplacian_3d_matrix(x1d, y1d,z1d, Lorder, BandInner, BandInit);
+[LRow, LCol, LVal] = find(L);
+BandOuterTemp = unique(LCol);
+BandOuter = BandInit( BandOuterTemp );
+
+CPOut = CPInit(BandOuterTemp,:);
+
+% Reform the L, Ecp matrices
+Ecp = Ecp(BandOuterTemp, BandInner);
+L = L(:, BandOuterTemp);
 
 
 
-% if ~exist(fullfile(FileLocationCP,FileNameIJK), 'file') || ~exist(fullfile(FileLocationCP,FileNameCP), 'file') || ~exist(fullfile(FileLocationCP,FileNameCPFACE), 'file') || ~exist(fullfile(FileLocationCP,FileNameDIST), 'file')
-%     
-%     [IJK,DIST,CP,XYZ,CPFACE] = tri2cp(Sphere.Face, Sphere.Location, spacing, MinPoint, porder, Lorder/2);
-%     
-%     save( fullfile(FileLocationCP, FileNameIJK), 'IJK', '-v7.3')
-%     save( fullfile(FileLocationCP, FileNameCP), 'CP', '-v7.3')
-%     save( fullfile(FileLocationCP, FileNameCPFACE), 'CPFACE', '-v7.3')
-%     save( fullfile(FileLocationCP, FileNameDIST), 'DIST', '-v7.3')
-%     save( fullfile(FileLocationCP, FileNameXYZ), 'XYZ', '-v7.3')
-%     
-% else
-%     
-%     load( fullfile(FileLocationCP, FileNameIJK) )
-%     load( fullfile(FileLocationCP, FileNameCP) )
-%     load( fullfile(FileLocationCP, FileNameCPFACE) )
-%     load( fullfile(FileLocationCP, FileNameDIST) )
-%     load( fullfile(FileLocationCP, FileNameXYZ) )
-% end
+Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, BandInner);
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Restriction Operator
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+InnerInOuter = zeros(size(BandInner));
+R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
 
-% BandSearchSize = [length(y1d), length(x1d), length(z1d)];
-% BandInit = sub2ind(BandSearchSize, IJK(:,1), IJK(:,2), IJK(:,3));
-
-BandInit = find(abs(DIST) <= bandwidth);
-
-% FaceInterpolateWeights = interpBarycenterTriangle(Sphere, CP, CPFACE);
-
-% CPSignal = FaceInterpolateWeights * Sphere.Signal;
-
-% CPInit = CP(BandInit, :);
-
-% XYZInit = XYZ(BandInit, :);
-
-
-if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLocationCP, FileNameEcp), 'file') || ~exist(fullfile(FileLocationCP, FileNameEplot), 'file') || ~exist(fullfile(FileLocationCP, FileNameM), 'file')
-    
-    XYZInit = XYZ(BandInit,:);
-    CPInit = CP(BandInit,:);
-    
-    [L, Ecp, R, BandInner, BandOuter, BandInnerFull, BandOuterFull] = ...
-        ops_and_bands3d(x1d, y1d, z1d, XYZInit(:,1), XYZInit(:,2), XYZInit(:,3), ...
-        CPInit(:,1), CPInit(:,2), CPInit(:,3), BandInit, porder, Lorder);
-    
-    CPIn = CPInit(BandInner,:);  
-    
-    % Create L, E, M
-%     Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder);
-%     [EcpRow, EcpCol, EcpVal] = find(Ecp);
-%     BandInner = unique(EcpCol);
-%        
-%     L = laplacian_3d_matrix(x1d, y1d,z1d, Lorder, BandInner, BandInit);
-%     [LRow, LCol, LVal] = find(L);
-%     BandOuterTemp = unique(LCol);
-%     BandOuter = BandInit( BandOuterTemp );
-% 
-%     Ecp = Ecp(BandOuterTemp, BandInner);
-%     L = L(:, BandOuterTemp);
-    
-    
-    
-%     InnerInOuter = zeros(size(BandInner));
-%     R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
-%     for i = 1 : length(BandInner)
-%         I = find(BandOuter == BandInner(i));
-%         InnerInOuter(i) = I;
-%         R(i,I) = 1;
-%     end
-    
-
-    M = lapsharp_unordered(L, Ecp, R);
-   
-    Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, BandInnerFull);
-
-%     CPOut = CPInit(BandOuterTemp,:);
-%     CPIn = R*CPOut;
-    
-    
-    save( fullfile(FileLocationCP, FileNameL), 'L', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameEplot), 'Eplot', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameEcp), 'Ecp', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameM), 'M', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameCPIn), 'CPin', '-v7.3')
-    
-else
-    
-    load( fullfile(FileLocationCP, FileNameL) )
-    load( fullfile(FileLocationCP, FileNameEplot) )
-    load( fullfile(FileLocationCP, FileNameEcp) )
-    load( fullfile(FileLocationCP, FileNameM) )
-    load( fullfile(FileLocationCP, FileNameCPIn) )
-    
+for i = 1 : length(BandInner)
+   I = find(BandOuter == BandInner(i));
+   InnerInOuter(i) = I;
+   R(i,I) = 1;
 end
 
-ItM = speye(size(M)) - alpha*tauImplicit * M;
-
-I23tM = speye(size(M)) - (2/3)*alpha*tauImplicit * M;
-
+CPIn = R*CPOut;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define the Signal and Plot Matrix
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[CPTheta, CPPhi, CPRadius] = cart2sph(CPIn(:,1) ,CPIn(:,2), CPIn(:,3));
 
-CPSignal = ExactSignal(0, CPTheta);
+[CPTheta, CPPhi, CPRadius] = cart2sph(CPIn(:,1), CPIn(:,2), CPIn(:,3));
+
+CPTheta = CPTheta + pi;
+CPSignal = ExactSignal(0, CPTheta); 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Construct the Laplace-Beltrami
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+M = lapsharp_unordered(L, Ecp, R);
+
+
+ItM = speye(size(M)) - alpha*tauImplicit * M;
+
+I23tM = speye(size(M)) - (2/3)*alpha*tauImplicit * M;
 
 
 
@@ -254,8 +191,8 @@ figure(1)
 for i = 1 : NumStepsImplicit - 1
     
 %     if i == 1
-    Signal(:,i+1) = ItM \ Signal(:,i);
-%         [Signal(:,i+1), flag] = gmres(ItM, Signal(:,i), [], 1e-10, 100);
+%     Signal(:,i+1) = ItM \ Signal(:,i);
+        [Signal(:,i+1), flag] = gmres(ItM, Signal(:,i), [], 1e-10, 100);
 %     else
 %         [Signal(:,i+1), flag] = gmres(I23tM, (4/3)*Signal(:,i) - (1/3)*Signal(:,i-1), [], 1e-10, 100);
 %     end
@@ -267,12 +204,12 @@ for i = 1 : NumStepsImplicit - 1
     end
     
     clf
-    plot(Theta, SignalOriginal,'b.')
+    plot(Sphere.Theta, SignalOriginal,'b.')
     hold on
-    plot(Theta, SignalAtVertex(:,i),'ko')
+    plot(Sphere.Theta, SignalAtVertex(:,i),'ko')
     
-    Truth = ExactSignal(ScaleParameter(i), Theta);
-    plot(Theta, Truth,'rs')
+    Truth = ExactSignal(ScaleParameter(i), Sphere.Theta);
+    plot(Sphere.Theta, Truth,'rs')
 	AbsErr(i,1) = norm(Truth - SignalAtVertex(:,i), inf);
    
     waitbar(i/NumStepsImplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsImplicit-1));
