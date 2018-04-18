@@ -96,26 +96,25 @@ end
 toc
 
 
-
-
-G = sparse(Gi(:), Gj(:), Gs(:), length(band), Nx*Ny*Nz);
+G = sparse(Gi(:), Gj(:), Gs(:), length(band), Nx*Ny*Nz, nnz(Gs));
 
 
 % Gout = G(:, setdiff(1:(Nx*Ny*Nz),Band));
 
-nnzG = nnz(G);
-G = G(:,band);
+% nnzG = nnz(G);
 
 
-if nnzG ~= nnz(G)
-    disp('Lost some non-zero coefficients (from outside the outerband)')
-end
+
+% if nnzG ~= nnz(G)
+%     disp('Lost some non-zero coefficients (from outside the outerband)')
+% end
 
 
 % Normalize the rows to unity after simplifying by band
+G = G(:,band);
 
 Glength = length(G);
-
+% 
 G = sparse(1:Glength,1:Glength, 1./sum(G,2)) * G;
 
 

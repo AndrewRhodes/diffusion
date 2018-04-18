@@ -176,7 +176,8 @@ for MCsigma = 1 : length(MCnumsigma)
 
                 
         if ~exist( fullfile(FileLocationCPGauss, FileNameGCart), 'file')
-            GCart = make3DImplicitGaussian(x1d, y1d, z1d, sigma, spacing, Band, numsigmas, LimitFarPoints);
+            GCart  = make3DImplicitGaussian(x1d, y1d, z1d, sigma, spacing, Band, numsigmas, LimitFarPoints);
+               
             save(fullfile(FileLocationCPGauss, FileNameGCart), 'GCart', '-v7.3')
         else
             load(fullfile(FileLocationCPGauss, FileNameGCart))
