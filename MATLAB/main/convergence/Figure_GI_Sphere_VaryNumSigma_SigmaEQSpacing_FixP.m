@@ -18,28 +18,30 @@ ProjectRoot = setupprojectpaths; % Additional Paths
 
 MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01];
 
-MCnumsigma = [1, 2, 3, 4, 5, 6, 7, 8];
+%MCnumsigma = [1, 2, 3, 4, 5, 6, 7, 8];
 
-MCError = zeros(length(MCspacing), 2, length(MCnumsigma));
-MCErrorAll = cell(length(MCspacing), length(MCnumsigma));
+MCporder = [1,2,3,4,5,6,7,8];
+
+MCError = zeros(length(MCspacing), 2, length(MCporder));
+MCErrorAll = cell(length(MCspacing), length(MCporder));
 
 
-for MCsigma = 1 : length(MCnumsigma)
+for MCp = 1 : length(MCporder)
     
     for MCs = 1 : length(MCspacing)
         
         
         
-        clearvars -except MCspacing MCs MCsigma MCError MCErrorAll MCnumsigma ProjectRoot
+        clearvars -except MCspacing MCs MCporder MCp MCError MCErrorAll ProjectRoot
         spacing = MCspacing(MCs)
-        numsigmas = MCnumsigma(MCsigma)
+%        numsigmas = MCnumsigma(MCsigma)
         
-        porder = 3;
+       porder = MCporder(MCp)
         dim = 3;
 %         spacing = 0.1;
         % sigma <= spacing
         sigma = spacing;
-%         numsigmas = 7;
+         numsigmas = 4
         LimitFarPoints = 1;
         
         ShowPlot = 0;
@@ -129,16 +131,16 @@ for MCsigma = 1 : length(MCnumsigma)
         
          
         
-        if ~exist( fullfile(FileLocationCPGauss, FileNameCP), 'file') || ~exist( fullfile(FileLocationCPGauss, FileNameIJK), 'file')
+      %  if ~exist( fullfile(FileLocationCPGauss, FileNameCP), 'file') || ~exist( fullfile(FileLocationCPGauss, FileNameIJK), 'file')
             
             [IJK,DIST,CP,XYZ,CPFACE] = tri2cp(Sphere.Face, Sphere.Location, spacing, MinPoint, porder, 1);           
             
-            save(fullfile(FileLocationCPGauss, FileNameCP), 'CP', '-v7.3')
-            save(fullfile(FileLocationCPGauss, FileNameIJK), 'IJK', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameCP), 'CP')
-            load(fullfile(FileLocationCPGauss, FileNameIJK), 'IJK')
-        end
+     %       save(fullfile(FileLocationCPGauss, FileNameCP), 'CP', '-v7.3')
+    %        save(fullfile(FileLocationCPGauss, FileNameIJK), 'IJK', '-v7.3')
+   %     else
+  %          load(fullfile(FileLocationCPGauss, FileNameCP), 'CP')
+ %           load(fullfile(FileLocationCPGauss, FileNameIJK), 'IJK')
+%        end
         
         
         
@@ -157,40 +159,40 @@ for MCsigma = 1 : length(MCnumsigma)
         
 
         
-        if ~exist( fullfile(FileLocationCPGauss, FileNameEcp), 'file')
+%        if ~exist( fullfile(FileLocationCPGauss, FileNameEcp), 'file')
             Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder, Band);
-            save(fullfile(FileLocationCPGauss, FileNameEcp), 'Ecp', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameEcp))
-        end
+%            save(fullfile(FileLocationCPGauss, FileNameEcp), 'Ecp', '-v7.3')
+%        else
+%            load(fullfile(FileLocationCPGauss, FileNameEcp))
+%        end
         
-        if ~exist( fullfile(FileLocationCPGauss, FileNameEplot), 'file')
+%        if ~exist( fullfile(FileLocationCPGauss, FileNameEplot), 'file')
             Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, Band);
-            save(fullfile(FileLocationCPGauss, FileNameEplot), 'Eplot', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameEplot))
-        end
+%            save(fullfile(FileLocationCPGauss, FileNameEplot), 'Eplot', '-v7.3')
+%        else
+%            load(fullfile(FileLocationCPGauss, FileNameEplot))
+%        end
         
         
-        clearvars -except MCspacing MCs MCsigma MCError MCErrorAll MCnumsigma ProjectRoot x1d y1d z1d spacing Band numsigmas LimitFarPoints sigma FileLocationCPGauss FileNameGCart FileNameEcp FileNameG
+%        clearvars -except MCspacing MCs MCsigma MCError MCErrorAll MCnumsigma ProjectRoot x1d y1d z1d spacing Band numsigmas LimitFarPoints sigma FileLocationCPGauss FileNameGCart FileNameEcp FileNameG
 
                 
-        if ~exist( fullfile(FileLocationCPGauss, FileNameGCart), 'file')
+%        if ~exist( fullfile(FileLocationCPGauss, FileNameGCart), 'file')
             GCart  = make3DImplicitGaussian(x1d, y1d, z1d, sigma, spacing, Band, numsigmas, LimitFarPoints);
                
-            save(fullfile(FileLocationCPGauss, FileNameGCart), 'GCart', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameGCart))
-        end
+%            save(fullfile(FileLocationCPGauss, FileNameGCart), 'GCart', '-v7.3')
+%        else
+%            load(fullfile(FileLocationCPGauss, FileNameGCart))
+%        end
         
-        load(fullfile(FileLocationCPGauss, FileNameEcp))
+   
         
-        if  ~exist( fullfile(FileLocationCPGauss, FileNameG), 'file')
+%        if  ~exist( fullfile(FileLocationCPGauss, FileNameG), 'file')
             G = GCart*Ecp;
-            save(fullfile(FileLocationCPGauss, FileNameG), 'G', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameG))
-        end
+%            save(fullfile(FileLocationCPGauss, FileNameG), 'G', '-v7.3')
+%        else
+%            load(fullfile(FileLocationCPGauss, FileNameG))
+%        end
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -236,7 +238,7 @@ for MCsigma = 1 : length(MCnumsigma)
 %         SignalAtVertex(:,1) = SignalOriginal;
         SignalAtVertex = SignalOriginal;
         
-        WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumSteps-1));
+%        WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumSteps-1));
         AbsErr = zeros(NumSteps,1);
         
         if ShowPlot
@@ -262,17 +264,17 @@ for MCsigma = 1 : length(MCnumsigma)
             
             Signal = SignalNew;
             
-            waitbar(i/NumSteps, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumSteps-1));
+ %           waitbar(i/NumSteps, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumSteps-1));
         end
         
-        waitbar(i/NumSteps, WaitBar, sprintf('Diffusion Complete'));
-        close(WaitBar)
+%        waitbar(i/NumSteps, WaitBar, sprintf('Diffusion Complete'));
+%        close(WaitBar)
         if ShowPlot
             close(figure(1))
         end
         
-        MCError(MCs, 1:2, MCsigma) = [NumSteps, AbsErr(NumSteps - 1)];
-        MCErrorAll{MCs, MCsigma} = [(1:NumSteps)', AbsErr];
+        MCError(MCs, 1:2, MCp) = [NumSteps, AbsErr(NumSteps - 1)];
+        MCErrorAll{MCs, MCp} = [(1:NumSteps)', AbsErr];
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -280,4 +282,4 @@ for MCsigma = 1 : length(MCnumsigma)
     end
 end
         
-        
+       
