@@ -36,7 +36,7 @@ ExactSignal = @(sigma, theta) exp(-sigma^2/2)*cos(theta);
 % Make the Circle and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Theta = linspace(0, 2*pi, 2000)';
+Theta = linspace(0, 2*pi, 1000)';
 
 Radius = ones(size(Theta));
 [xp,yp] = pol2cart(Theta, Radius);

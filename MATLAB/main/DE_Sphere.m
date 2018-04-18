@@ -16,13 +16,13 @@ ProjectRoot = setupprojectpaths % Additional Paths
     
 
 alpha = 1;
-NumberDivisions = 3; % For building Icosphere
+NumberDivisions = 5; % For building Icosphere
 
 % Spherical Harmonics are for defined for l = 1 ... inf, but the 
 % coefficients on higher terms quickly go to zero. 
-MaxDegreeL = 50;
+MaxDegreeL = 20;
 
-options.rho = 3;
+options.rho = 6;
 options.dtype = 'geodesic';
 % options.dtype = 'euclidean';
 
@@ -73,23 +73,49 @@ MaxTauExplicit = 10 / Sphere.Resolution;
 NumStepsExplicit = round(MaxTauExplicit);
 % % % % % % % % % % 
 
-
+% NumStepsExplicit = 1000
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Make the Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
 
-SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.Phi );
 
+% SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.Phi );
+% SphericalHarmonic = sum(cell2mat(SphericalHarmonic),1);
 % Define the signal
 
-ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2)*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
+% ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat( cellfun(@times, num2cell( (exp(-(sigma^2/2)*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
 
-% % ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, cellfun(@times, num2cell( (exp(-(1:MaxDegreeL).*((1:MaxDegreeL)+1)*sigma^2/2)')), num2cell( (exp(-(1:MaxDegreeL).^2/9))' ), 'UniformOutput', 0), SignalOriginal, 'UniformOutput', 0)),1);
+% ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( sqrt( (2*(1:MaxDegreeL)'+1) / (4*pi) ) ),  cellfun(@times, num2cell( exp(-(sigma^2/2)*(1:MaxDegreeL).*((1:MaxDegreeL)+1))' ), SignalOriginal, 'UniformOutput', 0), 'UniformOutput', 0)),1);
+ExactSignal = @(sigma, Phi) exp(-sigma^2/2)*cos(bsxfun(@minus,Phi,pi/2));
 
-SignalOriginal = ExactSignal(0, SphericalHarmonic, MaxDegreeL);
+% ExactSignal = @(sigma, OriginalSignal) exp(-sigma^2/2)*OriginalSignal;
+
+% SignalOriginal = sum(cell2mat(cellfun(@times, num2cell(sqrt( bsxfun(@plus, 2*(1:MaxDegreeL), 1)' / (4*pi) ) ), SphericalHarmonic, 'UniformOutput', 0) ),1)';
+
+
+% SignalOriginal = findExactSignal(0, Sphere.Theta, Sphere.Phi, MaxDegreeL);
+% SignalOriginal = ExactSignal(0, SphericalHarmonic, MaxDegreeL);
+SignalOriginal = ExactSignal(0, Sphere.Phi);
+% SignalOriginal = cos(Sphere.Theta);
+% SignalOriginal = findExactSignal(0, Sphere.Theta, Sphere.Phi, 1);
+% SignalOriginal = zeros(Sphere.LocationCount,1);
+% SignalOriginal(end) = 1; 
+% SignalOriginal = findExactSignal(0, Sphere.Theta, Sphere.Phi, MaxDegreeL);
+% SignalOriginal = sum(cell2mat(SphericalHarmonic),1)';
 Sphere.Signal = SignalOriginal;
+
+
+% 
+% DistanceFromImpulse = acos( Sphere.Location(1,:) * Sphere.Location')';
+% EuclidDistanceFromImpulse = sqrt(sum(bsxfun(@minus, Sphere.Location, Sphere.Location(1,:)).^2,2));
+% DistanceFromImpulse = asin( (EuclidDistanceFromImpulse/2) .* sqrt(4-EuclidDistanceFromImpulse.^2));
+% 
+% 
+% ExactSignal = @(sigma, OriginalSignal)
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construct the Laplace Beltrami
@@ -100,20 +126,20 @@ FileNameLapMat = strcat('LapMatMeshWeights','_Div',num2str(NumberDivisions),'_Nu
 FileNameArea = strcat('Area','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 FileNamehEdge = strcat('hEdge2','_Div',num2str(NumberDivisions),'_NumSigma',num2str(options.rho),'_',options.dtype,'.mat');
 
-if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
+% if ~exist(fullfile(FileLocationMeshLP, FileNameLapMat), 'file')
     
     [LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix(fullfile(FileLocation, FileName), options);
     
-    save(fullfile(FileLocationMeshLP, FileNameLapMat), 'LapMatMeshWeights')
-    save(fullfile(FileLocationMeshLP, FileNameArea), 'Area')
-    save(fullfile(FileLocationMeshLP, FileNamehEdge), 'hEdge2')
-else
-    
-    load(fullfile(FileLocationMeshLP, FileNameLapMat))
-    load( fullfile(FileLocationMeshLP, FileNameArea) )
-    load( fullfile(FileLocationMeshLP, FileNamehEdge) )
-    
-end
+%     save(fullfile(FileLocationMeshLP, FileNameLapMat), 'LapMatMeshWeights')
+%     save(fullfile(FileLocationMeshLP, FileNameArea), 'Area')
+%     save(fullfile(FileLocationMeshLP, FileNamehEdge), 'hEdge2')
+% else
+%     
+%     load(fullfile(FileLocationMeshLP, FileNameLapMat))
+%     load( fullfile(FileLocationMeshLP, FileNameArea) )
+%     load( fullfile(FileLocationMeshLP, FileNamehEdge) )
+%     
+% end
 
 hEdge = (hEdge2/2);
 
@@ -127,12 +153,17 @@ ItL = speye(Alength, Alength) - alpha*tauExplicit * LBM;
 
 I23tL = speye(Alength, Alength) - (2/3)*alpha*tauExplicit * LBM;
 
+I611tL = speye(Alength, Alength) - (6/11)*alpha*tauExplicit * LBM;
+
+I1225tL = speye(Alength, Alength) - (12/25)*alpha*tauExplicit * LBM;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Scale Parameter Estimation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ScaleParameter = findScaleParamter(tauExplicit, alpha, NumStepsExplicit, 1, 3);
+ScaleParameter = findScaleParamter(tauExplicit, 2*alpha, NumStepsExplicit, 'natural', '3d');
+
+% ScaleParameter = sqrt((0:NumStepsExplicit) * 2 * 2 * alpha * tauExplicit)';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -155,31 +186,41 @@ end
 
 for i = 1 : NumStepsExplicit - 1
     
-% %     if i ==1
-% %     SignalExplicit(:,i+1) = ItL \ SignalExplicit(:,i);
-        [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), 1e-10, 60);
-% %     [SignalExplicit(:,i+1), flag] = gmres(ItL, SignalExplicit(:,i), [], 1e-10, 100);
-% %     else
-% %         [SignalExplicit(:,i+1), flag] = gmres(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), [], 1e-10, 100);
-% %     end
+%     if i == 1
+        [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i), 1e-10, 100);
+%     elseif i == 2
+%         [SignalExplicit(:,i+1), flag] = bicg(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), 1e-10, 100);
+%     elseif i == 3
+%         [SignalExplicit(:,i+1), flag] = bicg(I611tL, (18/11)*SignalExplicit(:,i) - (9/11)*SignalExplicit(:,i-1) + (2/11)*SignalExplicit(:,i-2), 1e-10, 100);
+%     else
+%         [SignalExplicit(:,i+1), flag] = bicg(I1225tL, (48/25)*SignalExplicit(:,i)-(36/25)*SignalExplicit(:,i-1) + (16/25)*SignalExplicit(:,i-2) - (3/25)*SignalExplicit(:,i-3), 1e-10, 100);
+%     end
+    
+    
     
     if flag
         flag
     end
     
-    Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), SphericalHarmonic, MaxDegreeL);
+%     TruthGauss = exp(-DistanceFromImpulse.^2 / (2 * ScaleParameter(i+1)^2) );
+%     TruthGauss = TruthGauss * max(SignalExplicit(:,i+1));
+%     Truth(:,i+1) = TruthGauss;
+    
+%         Truth(:,i+1) = findExactSignal(ScaleParameter(i+1), Sphere.Theta, Sphere.Phi, MaxDegreeL);
+%     Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), SphericalHarmonic);
+%     Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), SphericalHarmonic, MaxDegreeL);
+    Truth(:,i+1) = ExactSignal(ScaleParameter(i+1), Sphere.Phi);
 	AbsErr(i+1,1) = norm(Truth(:,i+1) - SignalExplicit(:,i+1), inf);
     
     if ShowPlot
         clf
-        plot(Sphere.Theta, SignalOriginal,'ko')
+        plot(Sphere.Phi, SignalOriginal,'ko')
         hold on
-        plot(Sphere.Theta, Truth(:,i), 'gd')
-        plot(Sphere.Theta, SignalExplicit(:,i),'r.')
+        plot(Sphere.Phi, Truth(:,i), 'gd')
+        plot(Sphere.Phi, SignalExplicit(:,i),'r.')
     end
     
     waitbar(i/NumStepsExplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplicit-1));
-    
 end
 
 waitbar(i/NumStepsExplicit, WaitBar, sprintf('Diffusion Complete'));
@@ -188,15 +229,34 @@ if ShowPlot
     close(figure)
 end
 
+figure
+loglog(1:NumStepsExplicit, AbsErr)
 
 % MCError(MCs, 1:2, MCp) = [NumStepsImplicit, AbsErr(NumStepsImplicit - 1)];
 % MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
 
 
+% Mean3 = mean( SignalExplicit3 );
+% Mean4 = mean( SignalExplicit4 );
+% Mean5 = mean( SignalExplicit5 );
+% 
+% figure
+% plot(1:length(Mean3), Mean3);
+% hold on
+% plot(1:length(Mean4), Mean4);
+% plot(1:length(Mean5), Mean5);
+% legend('3','4','5')
 
 
 
 
-
-
-
+% for i = 1 : NumStepsExplicit
+%     
+%     V(i,1) = var( bsxfun(@minus, SignalExplicit(:,i), sum(SignalExplicit(:,i))/Sphere.LocationCount) );
+%     M(i,1) = abs(mean(bsxfun(@minus, SignalExplicit(:,i),  sum(SignalExplicit(:,i))/Sphere.LocationCount )));
+%     
+% end
+% 
+% 
+% loglog(1:NumStepsExplicit, V)
+% loglog(1:NumStepsExplicit, M)

@@ -75,15 +75,14 @@ for i = 1 : PointCloud.LocationCount
 end
 
 % The product of the center vertex area with it's neighbor vertex areas
-% AreaProd = cellfun(@times, num2cell(PointCloud.VertexArea), VerNeighArea, 'uniformoutput',0);
-AreaProd = VerNeighArea;
+AreaProd = cellfun(@times, num2cell(PointCloud.VertexArea), VerNeighArea, 'uniformoutput',0);
+% AreaProd = VerNeighArea;
 
 % Place PointCloud.Location into a cell for later use in cellfun
 PCLocCell = mat2cell(PointCloud.Location,ones(PointCloud.LocationCount,1),3);
 
 % Define the function for the Gaussian exponential part for use in cellfun
 ExpDiffFunc = @(CentVert, NeighVert, sigma) exp( - sqrt( sum( bsxfun( @minus, CentVert, NeighVert).^2, 2) ) ./ (2*sigma^2) );
-
 % Find the exponential part of the Gaussian using cellfun
 WeightExp = cellfun(ExpDiffFunc, PCLocCell, PCLocNeighCell, num2cell(AverageEdgeLength*ones(PointCloud.LocationCount,1)),'uniformoutput',0);
 
@@ -93,8 +92,8 @@ AreaExpWeight = cellfun(@times, AreaProd, WeightExp, 'uniformoutput',0);
 
 
 % Multiple the Gaussian constant with the other terms
-% ConstAreaExpWeight = cellfun(@times, num2cell(1/(2*pi*AverageEdgeLength^2)*ones(PointCloud.LocationCount,1)), AreaExpWeight, 'uniformoutput',0);
-ConstAreaExpWeight = cellfun(@times, num2cell(ones(PointCloud.LocationCount,1)), AreaExpWeight, 'uniformoutput',0);
+ConstAreaExpWeight = cellfun(@times, num2cell(1/(2*pi*AverageEdgeLength^2)*ones(PointCloud.LocationCount,1)), AreaExpWeight, 'uniformoutput',0);
+% ConstAreaExpWeight = cellfun(@times, num2cell(ones(PointCloud.LocationCount,1)), AreaExpWeight, 'uniformoutput',0);
 
 % Reshape into column vector for use in sparse matrix constuction
 Weights = vertcat(ConstAreaExpWeight{:});
@@ -107,11 +106,10 @@ B = sparse(1:PointCloud.LocationCount, 1:PointCloud.LocationCount, 1./PointCloud
 
 
 if NormalizeMethod == 1
-%     G = B./ max(sum(B,2));
-    G = GA./ max(sum(GA,2));
-elseif NormalizeMethod == 2
-%     G = bsxfun(@rdivide, B , sum(B,2));
     G = bsxfun(@rdivide, GA , sum(GA,2));
+elseif NormalizeMethod == 2
+    G = bsxfun(@rdivide, B , sum(B,2));
+    G = bsxfun(@rdivide, G , sum(G,2));
 end
 
 

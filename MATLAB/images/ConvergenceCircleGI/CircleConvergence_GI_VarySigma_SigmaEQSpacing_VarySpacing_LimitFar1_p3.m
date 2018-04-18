@@ -34,7 +34,7 @@ for MCsigma = 1 : length(MCnumsigma)
         numsigmas = MCnumsigma(MCsigma)
         
         alpha = 1;
-        porder = 4;
+        porder = 3;
         dim = 2;
 %         Lorder = 2;
         % spacing = 0.01;
@@ -240,12 +240,31 @@ close all
 
 
 
-Points = zeros(size(MCErrorAll,1), 2, size(MCErrorAll,2));
-for j = 1 : size(MCErrorAll,2)
-    for i = 1 : size(MCErrorAll,1)
-        Points(i,1:2,j) = [MCErrorAll{i,j}(end,1), MCErrorAll{i,j}(end,2)];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plot Numerical Convergence
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+FileLocationPoints = strcat(ProjectRoot,'/images/ConvergenceCircleGI');
+FileNamePoints = strcat('GI_Points', '_NumPoints',num2str(NumCirclePoints),'_p',num2str(porder), '_VarySigma', 'SigmaEQSpacing','.mat' );
+
+
+if ~exist( fullfile( FileLocationPoints, FileNamePoints), 'file' ) 
+
+    Points = zeros(size(MCErrorAll,1), 2, size(MCErrorAll,2));
+    for j = 1 : size(MCErrorAll,2)
+        for i = 1 : size(MCErrorAll,1)
+            Points(i,1:2,j) = [MCErrorAll{i,j}(end,1), MCErrorAll{i,j}(end,2)];
+        end
     end
+
+    save( fullfile( FileLocationPoints, FileNamePoints), 'Points', '-v7.3')
+else
+    load( fullfile( FileLocationPoints, FileNamePoints) )
 end
+
+
 
 
 
@@ -268,7 +287,7 @@ loglog(logx, logy,'k-','linewidth',3)
 
 % xl=get(gca,'XLim');
 % yl=get(gca,'YLim');
-text1 = text(15,10*10^(-6),'$3^{rd}$ Order','Interpreter','latex');
+text1 = text(12,10*10^(-7.5),'$3^{rd}$ Order','Interpreter','latex');
 set(text1,'Rotation',-20)
 set(text1,'FontSize',50)
 

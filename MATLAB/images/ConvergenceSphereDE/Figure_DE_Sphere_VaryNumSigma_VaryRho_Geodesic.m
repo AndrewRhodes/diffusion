@@ -30,8 +30,8 @@ for MCd = 1 : length(MCdiv)
     options.rho = MCrho(MCr)
 
 
-% options.dtype = 'geodesic';
-options.dtype = 'euclidean';
+options.dtype = 'geodesic';
+% options.dtype = 'euclidean';
 
 alpha = 1;
 

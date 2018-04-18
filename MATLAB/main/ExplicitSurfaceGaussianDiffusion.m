@@ -7,21 +7,21 @@ close all
 clear 
 clc
 
-addprojectpaths % Additional Paths
-
+addpath('../src/')
+ProjectRoot = setupprojectpaths; % Additional Paths
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-NumSteps = 500;
+NumSteps = 100;
 
-MaxImageSize = [30 30];
+MaxImageSize = [60,60];
 MiddleImage = MaxImageSize / 2;
 
 
 eSS = 0.5; % Explicit Surface Spacing
-MaxSurfSize = [30 30];
+MaxSurfSize = [60,60];
 
 
 
@@ -46,9 +46,10 @@ PointCloud = findMeshResolution(PointCloud, 'Model');
 
 AverageEdgeLength = findAverageEdgeLengths(PointCloud.Location, PointCloud.Face, 1);
 
-tic
-G = makeMeshGaussian(PointCloud, AverageEdgeLength, 6*sqrt(2)*AverageEdgeLength, 1);
-toc
+StdDev = AverageEdgeLength;
+
+G = makeMeshGaussian(PointCloud, StdDev, 6*sqrt(2)*StdDev, 1);
+
 
 
  
@@ -92,7 +93,7 @@ RadialDist3D = sqrt(sum(bsxfun(@minus, PointCloud.Location, PointCloud.Location(
 
 xgauss = 0:0.01:20;
 figure
-for i = 1 : NumSteps
+for i = 1 : NumSteps/3
     
     
     clf
@@ -100,7 +101,9 @@ for i = 1 : NumSteps
     hold on
     axis([0 20 0 2*max(SignalExplicit(:,i))])
     
-    t = (i-1) * AverageEdgeLength^2 * median(PointCloud.VertexArea)^(1/3)
+    t = (i-1) * StdDev^2 * 2 * exp(median( PointCloud.VertexArea ))
+%     t = (i-1) * StdDev^2 * (-log(median( PointCloud.VertexArea )^2))
+    
 %     t = (i-1) * ((AverageEdgeLength)/median(PointCloud.VertexArea)^(2/3))^2  ; %((AverageEdgeLength^(2/3))*median(PointCloud.VertexArea)^(1/3))
 
     sqrt(t)

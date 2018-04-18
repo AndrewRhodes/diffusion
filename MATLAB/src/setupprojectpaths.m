@@ -16,34 +16,48 @@ addpath(genpath(ProjectRoot))
 
 
 
-if ~exist(strcat(ProjectRoot, '/models/Plane/'), 'dir')
-    mkdir(ProjectRoot, 'models/Plane')
+%% Setup Directoryies for Plane
+if ~exist( strcat(ProjectRoot, '/models/Plane/'), 'dir')
+    mkdir( ProjectRoot, 'models/Plane' )
 end
 
-if ~exist(strcat(ProjectRoot, '/models/Plane/CPLaplace'), 'dir')
-    mkdir(ProjectRoot, 'models/Plane/CPLaplace')
+if ~exist( strcat(ProjectRoot, '/models/Plane/CPLaplace'), 'dir')
+    mkdir( ProjectRoot, 'models/Plane/CPLaplace' )
 end
 
-if ~exist(strcat(ProjectRoot, '/models/Plane/meshLP'), 'dir')
-    mkdir(ProjectRoot, 'models/Plane/meshLP')
+if ~exist( strcat(ProjectRoot, '/models/Plane/meshLP'), 'dir')
+    mkdir( ProjectRoot, 'models/Plane/meshLP' )
+end
+
+%% Setup Directories for Circle
+if ~exist( strcat(ProjectRoot, '/models/Circle/'), 'dir')
+    mkdir( ProjectRoot, 'models/Circle/' )
+end
+
+if ~exist( strcat(ProjectRoot, '/models/Circle/CPGauss/'), 'dir')
+    mkdir( ProjectRoot, 'models/Circle/CPGauss/' )
+end
+
+if ~exist( strcat(ProjectRoot, '/models/Circle/CPLaplace/'), 'dir')
+    mkdir( ProjectRoot, 'models/Circle/CPLaplace/' )
 end
 
 
-
-if ~exist(strcat(ProjectRoot, '/models/Sphere'), 'dir')
-    mkdir(ProjectRoot, 'models/Sphere')
+%% Setup Directories for Sphere
+if ~exist( strcat(ProjectRoot, '/models/Sphere'), 'dir')
+    mkdir( ProjectRoot, 'models/Sphere' )
 end
 
-if ~exist(strcat(ProjectRoot, '/models/Sphere/CPLaplace'), 'dir')
-    mkdir(ProjectRoot, 'models/Sphere/CPLaplace')
+if ~exist( strcat(ProjectRoot, '/models/Sphere/CPLaplace'), 'dir')
+    mkdir( ProjectRoot, 'models/Sphere/CPLaplace' )
 end
 
-if ~exist(strcat(ProjectRoot, '/models/Sphere/meshLP'), 'dir')
-    mkdir(ProjectRoot, 'models/Sphere/meshLP')
+if ~exist( strcat(ProjectRoot, '/models/Sphere/meshLP'), 'dir')
+    mkdir( ProjectRoot, 'models/Sphere/meshLP' )
 end
 
-if ~exist(strcat(ProjectRoot, '/data/'), 'dir')
-    mkdir(ProjectRoot, 'data')
+if ~exist( strcat(ProjectRoot, '/data/'), 'dir')
+    mkdir( ProjectRoot, 'data' )
 end
     
 

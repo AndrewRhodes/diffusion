@@ -18,31 +18,33 @@ ProjectRoot = setupprojectpaths; % Additional Paths
 
 MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005, 0.0025, 0.001];
 
-MCnumsigma = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-MCError = zeros(length(MCspacing), 2, length(MCnumsigma));
-MCErrorAll = cell(length(MCspacing), length(MCnumsigma));
+MCporder = [1, 2, 3, 4, 5, 6, 7];
 
 
-for MCsigma = 1 : length(MCnumsigma)
+
+MCError = zeros(length(MCspacing), 2, length(MCporder));
+MCErrorAll = cell(length(MCspacing), length(MCporder));
+
+
+for MCp = 1 : length(MCporder)
     
     for MCs = 1 : length(MCspacing)
         
         
-        clearvars -except MCspacing MCs MCsigma MCError MCErrorAll MCnumsigma ProjectRoot
+        clearvars -except MCspacing MCs MCp MCError MCErrorAll MCporder ProjectRoot
         spacing = MCspacing(MCs)
-        numsigmas = MCnumsigma(MCsigma)
+        porder = MCporder(MCp)
+        
         
         alpha = 1;
-        porder = 4;
+        % porder = 9;
         dim = 2;
-%         Lorder = 2;
         % spacing = 0.01;
         % sigma <= spacing
         sigma = spacing;
-        % numsigmas = 7;
+        numsigmas = 6;
         LimitFarPoints = 1;
-        
+
         if spacing > sigma
             bandwidth = 1.002*spacing*sqrt((dim-1)*((porder+1)/2)^2 + (((numsigmas*sigma)/spacing+(porder+1)/2)^2));
         else
@@ -106,15 +108,15 @@ for MCsigma = 1 : length(MCnumsigma)
         
         [GridX, GridY] = meshgrid(x1d, y1d);
         
-        if ~exist( fullfile(FileLocationCPGauss, FileNameCP), 'file') || ~exist( fullfile(FileLocationCPGauss, FileNameDIST), 'file')
+%         if ~exist( fullfile(FileLocationCPGauss, FileNameCP), 'file') || ~exist( fullfile(FileLocationCPGauss, FileNameDIST), 'file')
             [CP(:,1), CP(:,2), DIST] = cpCircle(GridX(:), GridY(:));
            
-            save(fullfile(FileLocationCPGauss, FileNameCP), 'CP', '-v7.3')
-            save(fullfile(FileLocationCPGauss, FileNameDIST), 'DIST', '-v7.3')
-        else
-            load(fullfile(FileLocationCPGauss, FileNameCP), 'CP')
-            load(fullfile(FileLocationCPGauss, FileNameDIST), 'DIST')
-        end
+%             save(fullfile(FileLocationCPGauss, FileNameCP), 'CP', '-v7.3')
+%             save(fullfile(FileLocationCPGauss, FileNameDIST), 'DIST', '-v7.3')
+%         else
+%             load(fullfile(FileLocationCPGauss, FileNameCP), 'CP')
+%             load(fullfile(FileLocationCPGauss, FileNameDIST), 'DIST')
+%         end
         
         
         band = find(abs(DIST) <= bandwidth);
@@ -143,13 +145,13 @@ for MCsigma = 1 : length(MCnumsigma)
             % GE = diag(G) + (G - diag(G))*Ecp;
             G = GCart*Ecp;
 
-            save(fullfile(FileLocationCPGauss, FileNameEcp), 'Ecp', '-v7.3')
-            save(fullfile(FileLocationCPGauss, FileNameEplot), 'Eplot', '-v7.3')
-            save(fullfile(FileLocationCPGauss, FileNameGCart), 'GCart', '-v7.3')
-            save(fullfile(FileLocationCPGauss, FileNameG), 'G', '-v7.3')
+%             save(fullfile(FileLocationCPGauss, FileNameEcp), 'Ecp', '-v7.3')
+%             save(fullfile(FileLocationCPGauss, FileNameEplot), 'Eplot', '-v7.3')
+%             save(fullfile(FileLocationCPGauss, FileNameGCart), 'GCart', '-v7.3')
+%             save(fullfile(FileLocationCPGauss, FileNameG), 'G', '-v7.3')
             
         else
-            
+%             
             load(fullfile(FileLocationCPGauss, FileNameEcp))
             load(fullfile(FileLocationCPGauss, FileNameEplot))
             load(fullfile(FileLocationCPGauss, FileNameGCart))
@@ -168,7 +170,7 @@ for MCsigma = 1 : length(MCnumsigma)
         % Scale Parameter Estimation
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        ScaleParameter = findScaleParamter(sigma, alpha, NumSteps, 1, 2);
+        ScaleParameter = findScaleParamter(sigma, alpha, NumSteps, 'natural', '2d');
         
         % ScaleParameter = zeros(NumSteps,1);
         %
@@ -230,8 +232,8 @@ for MCsigma = 1 : length(MCnumsigma)
         end
         
         
-        MCError(MCs, 1:2, MCsigma) = [NumSteps, AbsErr(NumSteps - 1)];
-        MCErrorAll{MCs, MCsigma} = [(1:NumSteps)', AbsErr];
+        MCError(MCs, 1:2, MCp) = [NumSteps, AbsErr(NumSteps - 1)];
+        MCErrorAll{MCs, MCp} = [(1:NumSteps)', AbsErr];
         
     end
 end
@@ -239,21 +241,47 @@ end
 close all
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plot Numerical Convergence
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Points = zeros(size(MCErrorAll,1), 2, size(MCErrorAll,2));
-for j = 1 : size(MCErrorAll,2)
-    for i = 1 : size(MCErrorAll,1)
-        Points(i,1:2,j) = [MCErrorAll{i,j}(end,1), MCErrorAll{i,j}(end,2)];
+
+
+
+
+FileLocationPoints = strcat(ProjectRoot,'/images/ConvergenceCircleGI');
+FileNamePoints = strcat('GI_Points', '_NumPoints',num2str(NumCirclePoints),'_NumSigma',num2str(numsigmas), '_Varyp', 'SigmaEQSpacing','.mat' );
+
+
+if ~exist( fullfile( FileLocationPoints, FileNamePoints), 'file' )
+    
+    Points = zeros(size(MCErrorAll,1),2, size(MCErrorAll,2));
+    for j = 1 : size(MCErrorAll,2)
+        for i = 1 : size(MCErrorAll,1)
+            Points(i,1:2,j) = [MCErrorAll{i,j}(end,1), MCErrorAll{i,j}(end,2)];
+        end
     end
+    save( fullfile( FileLocationPoints, FileNamePoints), 'Points', '-v7.3')
+    
+else
+    load( fullfile( FileLocationPoints, FileNamePoints) )
 end
 
 
 
-colors = ['k','k','k','b','c','k','m','g','r'];
-shapes = {'','','^','h','p','s','o','*','+'};
-lin  = {':','-.','--','-','-','-','--','-.',':'};
-msizes = [8, 8, 8, 8, 8, 17, 14, 12, 8];
-%          [8, 8, 8, 8, 8, 10, 12, 14, 17];
+
+
+
+
+
+
+
+colors = ['k','b','c','k','m','g','r'];
+shapes = {'','','p','s','o','*','+'};
+lin  = {':','-.','-','-','--','-.',':'};
+msizes = [8, 8, 8, 17, 14, 12, 8];
+
+
 
 figure('units','normalized','outerposition',[0 0 1 1])
 for i = 1 : size(Points,3)
@@ -261,31 +289,30 @@ for i = 1 : size(Points,3)
     hold on
 end
 
-% % % 3rd Order Line
+
+% % % % 3rd order line
 logx = [10,100];
-logy = (10e-3).*logx.^(-3);
+logy = (10e-2).*logx.^(-3);
 loglog(logx, logy,'k-','linewidth',3)
 
-% xl=get(gca,'XLim');
-% yl=get(gca,'YLim');
-text1 = text(15,10*10^(-6),'$3^{rd}$ Order','Interpreter','latex');
-set(text1,'Rotation',-20)
+xl=get(gca,'XLim');
+yl=get(gca,'YLim');
+text1 = text(15,10*10^(-6.5),'$3^{rd}$ Order','Interpreter','latex');
+set(text1,'Rotation',-32)
 set(text1,'FontSize',50)
 
 
 
-% % % 2nd Order Line
-logx = [50,500];
-logy = (10e1).*logx.^(-1);
+% % % % 1st order line
+logx = [100,1000];
+logy = (10*10^(-0.5)).*logx.^(-1);
 loglog(logx, logy,'k-','linewidth',3)
 
+text3 = text(150,10*10^(-2.2),'$1^{st}$ Order','Interpreter','latex');
+set(text3,'Rotation',-10)
+set(text3,'FontSize',50)
 
-text1 = text(80,10*10^(-0.4),'$1^{st}$ Order','Interpreter','latex');
-set(text1,'Rotation',-8)
-set(text1,'FontSize',50)
 
-
-% % % Axis Labels
 xlabel('N')
 ylabel('$\| $error$ \|_{\infty}$','Interpreter','latex')
 ax = gca;
@@ -295,12 +322,13 @@ ax.YAxis.FontSize = 50;
 
 xlim([10*10^(-0.75) 10*10^(2.5)])
 
+
 xticks([10e0 10e1 10e2 10e3])
 yticks([10e-10, 10e-8, 10e-6, 10e-4, 10e-2, 10e0, 10e2, 10e4])
 yticklabels({'10e-10','10e-8','10e-6','10e-4', '10e-2', '10e0', '10e2', '10e4'})
 
-hleg = legend({'$m_\sigma = 1$','$m_\sigma = 2$','$m_\sigma = 3$','$m_\sigma = 4$','$m_\sigma = 5$','$m_\sigma = 6$','$m_\sigma = 7$','$m_\sigma = 8$','$m_\sigma = 9$'},'Interpreter','latex');
-set(hleg, 'position', [0.80 0.58 0.07 0.2], 'FontSize', 35)
+hleg = legend('p=1','p=2','p=3','p=4','p=5','p=6','p=7');
+set(hleg, 'position', [0.82 0.63 0.07 0.2], 'FontSize', 35)
 
 
 

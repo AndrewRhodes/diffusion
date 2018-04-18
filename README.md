@@ -1,6 +1,6 @@
 # Scale Space Construction on 3D Surfaces
 
-We diffuse a signal (mean curvature) on explicit and implicit surfaces. We use the [mesh Laplacian](https://github.com/areslp/matlab/tree/master/MeshLP/MeshLP) for explicit surface diffusion and the [Implicit Closest Point Representation](https://people.maths.ox.ac.uk/macdonald/icpm.pdf) for implicit surface diffusion. 
+We diffuse a signal (mean curvature) on explicit and implicit surfaces. We use the [mesh Laplacian](https://github.com/areslp/matlab/tree/master/MeshLP/MeshLP) for explicit surface diffusion and the [Implicit Closest Point Representation](https://people.maths.ox.ac.uk/macdonald/icpm.pdf) for implicit surface diffusion.
 
 We propose a version of Gaussian for explicit surfaces called the mesh Gaussian. We also extend the method of Gaussian diffusion on implicit surfaces first theorized by [Merriman and Ruuth](ftp://ftp.math.ucla.edu/pub/camreport/cam06-32.pdf).
 
@@ -18,7 +18,6 @@ models/ is empty by design, but will populate as you run programs. It is easier 
 * Circle
 * Sphere
 * General Models
-
 
 
 ### Prerequisites
@@ -47,7 +46,7 @@ Both the mesh and the cotangent Laplacian will compile. Now your ready to run so
 
 * [Jian Sun](https://github.com/areslp) - [mesh Laplacian](http://www.cs.jhu.edu/~misha/Fall09/Belkin08.pdf) at [Github](https://github.com/areslp/matlab/tree/master/MeshLP/MeshLP)
 
-* Wil O.C. Ward - [icosphere.m](https://www.mathworks.com/matlabcentral/fileexchange/50105-icosphere) 
+* Wil O.C. Ward - [icosphere.m](https://www.mathworks.com/matlabcentral/fileexchange/50105-icosphere)
 
 * [Gabriel Peyr](https://github.com/gpeyre) - [mesh file readers](https://github.com/gpeyre/matlab-toolboxes/tree/master/toolbox_graph)
 
@@ -55,10 +54,4 @@ Both the mesh and the cotangent Laplacian will compile. Now your ready to run so
 
 ## Future Work
 
-Currently all code is written in MATLAB, though I would like to someday convert it other more open source languages. 
-
-
-
-
-
-
+Currently all code is written in MATLAB, though I would like to someday convert it other more open source languages.

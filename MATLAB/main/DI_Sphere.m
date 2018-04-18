@@ -20,7 +20,7 @@ ProjectRoot = setupprojectpaths; % Additional Paths
 NumberDivisions = 3;
 alpha = 1;
 
-porder = 3; 
+porder = 5; 
 dim = 3;
 Lorder = 2;
 spacing = 0.1;
@@ -30,7 +30,9 @@ tauImplicit = spacing / 8;
 MaxTauImplicit = 1/spacing;
 NumStepsImplicit = round(MaxTauImplicit); %ceil(MaxTauImplicit / tauImplicit);
 
-ExactSignal = @(sigma, theta) exp(-sigma^2/2) * cos(theta);
+ShowPlot = 1;
+
+ExactSignal = @(sigma, Phi) exp(-sigma^2/2)*cos(bsxfun(@minus,Phi,pi/2));
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,31 +60,31 @@ FileNameCPIn =strcat('CPIn','_Div',num2str(NumberDivisions),'_s',num2str(spacing
 % Make the Sphere and Signal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% if ~exist(fullfile(FileLocation, FileName), 'file')
-%     
-%     [Sphere.Location, Sphere.Face] = icosphere(NumberDivisions);
-%     
-%     save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
-%     
-% else
-%     
-%     [Sphere.Location, Sphere.Face] = read_off(fullfile(FileLocation, FileName));
-% 
-%     [m, n] = size(Sphere.Location);
-%     if m < n
-%         Sphere.Location = Sphere.Location';
-%     end
-%     
-%     [m, n] = size(Sphere.Face);
-%     if m < n
-%         Sphere.Face = Sphere.Face';
-%     end
-%     
-% end
-% 
-% Sphere.FaceCount = size(Sphere.Face, 1);
-% Sphere.LocationCount = size(Sphere.Location,1);
-% Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
+if ~exist(fullfile(FileLocation, FileName), 'file')
+    
+    [Sphere.Location, Sphere.Face] = icosphere(NumberDivisions);
+    
+    save_off(Sphere.Location, Sphere.Face, fullfile(FileLocation, FileName))
+    
+else
+    
+    [Sphere.Location, Sphere.Face] = read_off(fullfile(FileLocation, FileName));
+
+    [m, n] = size(Sphere.Location);
+    if m < n
+        Sphere.Location = Sphere.Location';
+    end
+    
+    [m, n] = size(Sphere.Face);
+    if m < n
+        Sphere.Face = Sphere.Face';
+    end
+    
+end
+
+Sphere.FaceCount = size(Sphere.Face, 1);
+Sphere.LocationCount = size(Sphere.Location,1);
+Sphere.FaceArea = findFaceArea(Sphere.Location,Sphere.Face);
 
 MinPoint = min(Sphere.Location) - bandwidth - spacing;
 MaxPoint = max(Sphere.Location) + bandwidth + spacing;
@@ -91,14 +93,17 @@ x1d = (MinPoint(1):spacing:MaxPoint(1))';
 y1d = (MinPoint(2):spacing:MaxPoint(2))';
 z1d = (MinPoint(3):spacing:MaxPoint(3))';
 
-[GridX, GridY, GridZ] = meshgrid(x1d, y1d, z1d);
-[CP(:,1), CP(:,2), CP(:,3), dist] = cpSphere(GridX, GridY, GridZ);
+
+% [GridX, GridY, GridZ] = meshgrid(x1d, y1d, z1d);
+% [CP(:,1), CP(:,2), CP(:,3), DIST] = cpSphere(GridX(:), GridY(:), GridZ(:));
 
 
 [Theta, Phi, Radius] = cart2sph(Sphere.Location(:,1) ,Sphere.Location(:,2), Sphere.Location(:,3));
 
 
-SignalOriginal = ExactSignal(0, Theta);
+SignalOriginal = ExactSignal(0, Phi);
+% SignalOriginal = zeros(Sphere.LocationCount,1);
+% SignalOriginal(1) = 1;
 Sphere.Signal = SignalOriginal;
 
 
@@ -141,11 +146,11 @@ BandInit = find(abs(DIST) <= bandwidth);
 % CPSignal = FaceInterpolateWeights * Sphere.Signal;
 
 % CPInit = CP(BandInit, :);
-
+% 
 % XYZInit = XYZ(BandInit, :);
 
 
-if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLocationCP, FileNameEcp), 'file') || ~exist(fullfile(FileLocationCP, FileNameEplot), 'file') || ~exist(fullfile(FileLocationCP, FileNameM), 'file')
+% if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLocationCP, FileNameEcp), 'file') || ~exist(fullfile(FileLocationCP, FileNameEplot), 'file') || ~exist(fullfile(FileLocationCP, FileNameM), 'file')
     
     XYZInit = XYZ(BandInit,:);
     CPInit = CP(BandInit,:);
@@ -168,9 +173,9 @@ if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLo
 % 
 %     Ecp = Ecp(BandOuterTemp, BandInner);
 %     L = L(:, BandOuterTemp);
-    
-    
-    
+%     
+%     
+%     
 %     InnerInOuter = zeros(size(BandInner));
 %     R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
 %     for i = 1 : length(BandInner)
@@ -178,31 +183,31 @@ if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLo
 %         InnerInOuter(i) = I;
 %         R(i,I) = 1;
 %     end
-    
-
-    M = lapsharp_unordered(L, Ecp, R);
-   
-    Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, BandInnerFull);
-
+%     
+% 
+%     M = lapsharp_unordered(L, Ecp, R);
+%    
+%     Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, BandInnerFull);
+% % 
 %     CPOut = CPInit(BandOuterTemp,:);
 %     CPIn = R*CPOut;
     
     
-    save( fullfile(FileLocationCP, FileNameL), 'L', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameEplot), 'Eplot', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameEcp), 'Ecp', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameM), 'M', '-v7.3')
-    save( fullfile(FileLocationCP, FileNameCPIn), 'CPin', '-v7.3')
-    
-else
-    
-    load( fullfile(FileLocationCP, FileNameL) )
-    load( fullfile(FileLocationCP, FileNameEplot) )
-    load( fullfile(FileLocationCP, FileNameEcp) )
-    load( fullfile(FileLocationCP, FileNameM) )
-    load( fullfile(FileLocationCP, FileNameCPIn) )
-    
-end
+%     save( fullfile(FileLocationCP, FileNameL), 'L', '-v7.3')
+%     save( fullfile(FileLocationCP, FileNameEplot), 'Eplot', '-v7.3')
+%     save( fullfile(FileLocationCP, FileNameEcp), 'Ecp', '-v7.3')
+%     save( fullfile(FileLocationCP, FileNameM), 'M', '-v7.3')
+%     save( fullfile(FileLocationCP, FileNameCPIn), 'CPin', '-v7.3')
+%     
+% else
+%     
+%     load( fullfile(FileLocationCP, FileNameL) )
+%     load( fullfile(FileLocationCP, FileNameEplot) )
+%     load( fullfile(FileLocationCP, FileNameEcp) )
+%     load( fullfile(FileLocationCP, FileNameM) )
+%     load( fullfile(FileLocationCP, FileNameCPIn) )
+%     
+% end
 
 ItM = speye(size(M)) - alpha*tauImplicit * M;
 
@@ -216,7 +221,7 @@ I23tM = speye(size(M)) - (2/3)*alpha*tauImplicit * M;
 
 [CPTheta, CPPhi, CPRadius] = cart2sph(CPIn(:,1) ,CPIn(:,2), CPIn(:,3));
 
-CPSignal = ExactSignal(0, CPTheta);
+% CPSignal = ExactSignal(0, CPTheta);
 
 
 
@@ -266,14 +271,17 @@ for i = 1 : NumStepsImplicit - 1
         disp(flag)
     end
     
-    clf
-    plot(Theta, SignalOriginal,'b.')
-    hold on
-    plot(Theta, SignalAtVertex(:,i),'ko')
+    Truth = ExactSignal(ScaleParameter(i+1), Phi);
+    AbsErr(i,1) = norm(Truth - SignalAtVertex(:,i), inf);
     
-    Truth = ExactSignal(ScaleParameter(i), Theta);
-    plot(Theta, Truth,'rs')
-	AbsErr(i,1) = norm(Truth - SignalAtVertex(:,i), inf);
+    if ShowPlot
+        clf
+        plot(Phi, SignalOriginal,'b.')
+        hold on
+        plot(Phi, SignalAtVertex(:,i),'ko')  
+        plot(Phi, Truth,'rs')
+    end
+	
    
     waitbar(i/NumStepsImplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsImplicit-1));
     

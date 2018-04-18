@@ -21,7 +21,7 @@ function FaceInterpolateWeights = interpBarycenterTriangle(PointCloud, ClosestPo
 
 if ~isfield(PointCloud, 'FaceArea')
     warning('PointCloud needs the field ''FaceArea''. Calling function findFaceAreas.')
-    PointCloud.FaceArea = findFaceAreas(PointCloud.Location,PointCloud.Face);
+    PointCloud.FaceArea = findFaceArea(PointCloud.Location,PointCloud.Face);
 end
 if ~isfield(PointCloud, 'Location')
     error('PointCloud needs the field ''Location''.')
@@ -51,17 +51,17 @@ V3CP = V3 - ClosestPoint;
 
 
 % v1 triangle area
-WeightV1 = sqrt( sum(cross(V2CP, V3CP).^2 ,2)) ./ (2*CPArea);
+WeightV1 = sqrt( sum( cross(V2CP, V3CP).^2 ,2 ) ) ./ (2*CPArea);
 
 % v2 triangle area
-WeightV2 = sqrt(sum(cross(V1CP, V3CP).^2 ,2)) ./ (2*CPArea);
+WeightV2 = sqrt( sum( cross(V1CP, V3CP).^2 ,2 ) ) ./ (2*CPArea);
 
 % v3 triangle area
-WeightV3 = sqrt(sum(cross(V1CP, V2CP).^2 ,2)) ./ (2*CPArea);
+WeightV3 = sqrt( sum( cross(V1CP, V2CP).^2 ,2 ) ) ./ (2*CPArea);
 
-cpLength = length(cpFace);
+cpLength = length( cpFace );
 
-cpVector = (1:cpLength)';
+cpVector = ( 1 : cpLength )';
 
 
 FaceInterpolateWeights = sparse( [cpVector; cpVector; cpVector], [F1; F2; F3], [WeightV1; WeightV2; WeightV3] , cpLength, PointCloud.LocationCount);
