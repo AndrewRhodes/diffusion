@@ -11,8 +11,8 @@
 
 % May need to change dimension:2D,3D to type:Gaussian,Laplacian
 
-
-function ScaleParameter = findScaleParamter(StepSize, Alpha, NumLevels, Method, Dimension)
+% ScaleParameter = findScaleParamter(StepSize, Alpha, NumLevels, Method, Dimension)
+function ScaleParameter = findScaleParamter(StepSize, Alpha, NumLevels, DiffusionMethod, ScaleMethod)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -33,34 +33,32 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Make Scale Parameter
 
-ScaleParameter = zeros(NumLevels,1);
+ScaleParameter = zeros(NumLevels-1,1);
 
-if strcmpi( Method, 'Natural' )
+if strcmpi( ScaleMethod, 'Natural' )
     
-    if strcmpi( Dimension, '2D' )
+    if strcmpi( DiffusionMethod, 'Gaussian' )
         
-        ScaleParameter = sqrt((0:NumLevels)' * StepSize^2);
+        ScaleParameter = sqrt((0:NumLevels-1)' * StepSize^2);
         
-    elseif strcmpi( Dimension, '3D' )
+    elseif strcmpi( DiffusionMethod, 'Laplacian' )
         
-        ScaleParameter = sqrt((0:NumLevels)' * 2 * Alpha * StepSize);
+        ScaleParameter = sqrt((0:NumLevels-1)' * 2 * Alpha * StepSize);
         
     else
-        
-        error('Unrecognized Method ''%s''. Must be ''Natural'' or ''Cutoff''.', Method)
-        
+        error('Unrecognized DiffusionMethod ''%s''. Must be ''Gaussian'' or ''Laplacian''.', DiffusionMethod)
     end
     
-elseif strcmpi( Method, 'Cutoff' )
+elseif strcmpi( ScaleMethod, 'Cutoff' )
     
-    ws = 0 : 0.01 : 5;
+	ws = 0 : 0.01 : 10;
     NumSample = length(ws);
     cut = sqrt(log(2));
     db3 = 1/sqrt(2);
     ws2 = (ws.^2)';
     H = ones(NumSample,1) ;
     h = 1 ./ ( ones(NumSample,1) + Alpha * StepSize * ws2 );
-    
+    H = H .* h;
     
     for i = 1 : NumLevels -1
         
@@ -75,11 +73,11 @@ elseif strcmpi( Method, 'Cutoff' )
         
     end
     
+    
 else
-    
-    error('Unrecognized Dimension ''%s''. Must be ''3D'' or ''2D''.', Dimension)
-    
+    error('Unrecognized Scale Method ''%s''. Must be ''Natural'' or ''Cutoff''.', ScaleMethod)
 end
+    
 
 
 end

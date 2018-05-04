@@ -15,16 +15,10 @@ clc
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Additional Paths
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% cd ~/Desktop/Ashish/'CS3 Code'/
-addpath(genpath('~/Documents/Software/MeshLP/'))
-addpath(genpath('~/Documents/Software/cp_matrices/'))
-addpath('~/AFOSR/Ashish/CS3 Code/')
-addpath(genpath('~/GitProjects/pose/MATLAB_PointCloudDescriptors/OURCVFH/'))
-addpath('src/')
-addpath('images/')
-addpath('data/')
-addpath('models/')
 
+% addpath('../src/')
+% ProjectRoot = setupprojectpaths; % Additional Paths
+global ProjectRoot
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,6 +67,12 @@ tauImplicit = tau2D^2/2;
 MaxTauImplicit = 200;
 NumStepsImplicit = round(MaxTauImplicit / tauImplicit);
 NumStepsImplicit = MaxLevel
+
+
+FileLocation = strcat(ProjectRoot,'/models/');
+FileName = 'Comet67PPlaneImage.off';
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Create Impulse Image
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -109,6 +109,7 @@ for i = [10, 50, 100, 200, MaxLevel]
     
     
 end
+
 
 
 
@@ -216,47 +217,56 @@ PointCloud.Signal = reshape(Image, [],1);
 
 Neighbors3D = findAdjacentNeighbors(PointCloud.Face, PointCloud.Location);
 
-save_off(PointCloud.Location, PointCloud.Face, 'PlaneImage.off');
+save_off(PointCloud.Location, PointCloud.Face, fullfile( FileLocation, FileName));
 
-[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix('models/PlaneImage.off');
+[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix(fullfile( FileLocation, FileName));
 
 hEdge = (hEdge2/2);
 % tauExplicit = 0.5*hEdge^2;
-tauExplicit = hEdge/4;
+% tauExplicit = hEdge/4;
+tauExplicit = tau2D^2/2;
 
-MaxTauExplicit  = 100;
-NumStepsExplcit = round(MaxTauExplicit / tauExplicit);
+MaxTauExplicit  = 200;
+% NumStepsExplcit = round(MaxTauExplicit / tauExplicit);
+NumStepsExplcit = MaxLevel;
 
 A1 = sparse(1:length(Area),1:length(Area), 1./Area);
 
 LBM = A1 * LapMatMeshWeights;
+LBMSize = size(LBM);
 
-ItL = speye(length(Area),length(Area)) - tauExplicit * LBM;
+ItL = speye(LBMSize) - tauExplicit * LBM;
+
+I23tL = speye(LBMSize) - (2/3)*tauExplicit * LBM;
+
+I611L = speye(LBMSize) - (6/11)*tauExplicit * LBM;
+
+I1225L = speye(LBMSize) - (12/25)*tauExplicit * LBM;
 
 SignalExplicit = zeros(PointCloud.LocationCount, NumStepsExplcit);
 SignalExplicit(:,1) = PointCloud.Signal;
-SignalExplicitOld = PointCloud.Signal;
 
 WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsExplcit-1));
-
+NumIter = 100;
 for i = 1 : NumStepsExplcit - 1
     
-    [SignalExplicitNew, flag] = bicg(ItL, SignalExplicitOld, 1e-10, 30);
+        
+        if i == 1
+            [SignalExplicit(:,i+1), flag] = bicg(ItL, SignalExplicit(:,i),  1e-10, NumIter);
+        elseif i == 2
+            [SignalExplicit(:,i+1), flag] = bicg(I23tL, (4/3)*SignalExplicit(:,i) - (1/3)*SignalExplicit(:,i-1), 1e-10, NumIter);
+        elseif i == 3
+            [SignalExplicit(:,i+1), flag] = bicg(I611L, (18/11)*SignalExplicit(:,i) - (9/11)*SignalExplicit(:,i-1) + (2/11)*SignalExplicit(:,i-2), 1e-10, NumIter);
+        else
+            [SignalExplicit(:,i+1), flag] = bicg(I1225L, (48/25)*SignalExplicit(:,i) - (36/25)*SignalExplicit(:,i-1) + (16/25)*SignalExplicit(:,i-2) - (3/25)*SignalExplicit(:,i-3), 1e-10, NumIter);
+        end
     
-    if flag
-        flag
-    end
-    
-    if any(SignalExplicitNew < 0) || any(SignalExplicitNew > 1)
-        SignalExplicitNew(SignalExplicitNew < 0) = 0;
-        SignalExplicitNew(SignalExplicitNew > 1) = 1;
-        warning('Values out of bounds')
-        i
-    end
-    
-    SignalExplicit(:,i+1) = SignalExplicitNew;
-    
-    SignalExplicitOld = SignalExplicitNew;
+%     if any(SignalExplicit(:,i+1) < 0) || any(SignalExplicit(:,i+1) > 1)
+%         SignalExplicitNew(SignalExplicitNew < 0) = 0;
+%         SignalExplicitNew(SignalExplicitNew > 1) = 1;
+%         warning('Values out of bounds')
+%         i
+%     end
     
     waitbar(i/NumStepsExplcit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsExplcit-1));
     
@@ -271,11 +281,23 @@ close(WaitBar)
 
 figure
 for i = 1 : NumStepsExplcit
+    
     a = reshape(SignalExplicit(:,i),MaxSurfSize(1),MaxSurfSize(2));
 
     imshow(a)
     
 end
+
+
+for i = [50, 100, 200, NumStepsExplcit]
+    
+    
+    figure
+    imshow(reshape(SignalExplicit(:,i),MaxSurfSize(1),MaxSurfSize(2)))
+    
+    
+end
+
 
 
 
@@ -344,12 +366,18 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Create Implicit 3D Surface, L, E, M, diffusion for impulse 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+spacing = 0.75
+sigma = spacing
+numsigmas=4
+bandwidth = 1.002*numsigmas*sigma*sqrt((dim-1)*((porder+1)/2)^2 + (((numsigmas*sigma)/spacing+(porder+1)/2)^2));
 % Create 3D implcit Surface
-bandwidth = 1.00001*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
+% bandwidth = 1.00001*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
 
-MinPoint = round(min(PointCloud.Location) - bandwidth - spacing, 1);
-MaxPoint = round(max(PointCloud.Location) + bandwidth + spacing, 1);
+MinPoint = round(min(PointCloud.Location) - bandwidth - ceil(numsigmas * sigma), 1);
+MaxPoint = round(max(PointCloud.Location) + bandwidth + ceil(numsigmas * sigma), 1);
+
+% MinPoint = round(min(PointCloud.Location) - bandwidth - spacing, 1);
+% MaxPoint = round(max(PointCloud.Location) + bandwidth + spacing, 1);
 
 x1d = (MinPoint(1):spacing:MaxPoint(1))';
 y1d = (MinPoint(2):spacing:MaxPoint(2))';
@@ -370,9 +398,13 @@ BandSearchSize = [length(x1d), length(y1d), length(z1d)];
 
 Band = sub2ind(BandSearchSize, IJK(:,1), IJK(:,2), IJK(:,3));
 
+Band = find( abs(DIST) < bandwidth);
 
 % Create L, E, M
 L = laplacian_3d_matrix(y1d,x1d,z1d, Lorder, Band);
+
+GCart  = make3DImplicitGaussian(x1d, y1d, z1d, tau2D, spacing, Band, numsigmas, 1);
+G = GCart*Ecp;
 
 % Eplot = interpLagrange3D(BandSearchSize, MinPoint, PointCloud.Location(:,[1,2,3]), porder, Band, spacing);
 

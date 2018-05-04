@@ -9,20 +9,36 @@
 
 
 
-function Neighbors = findAdjacentNeighbors(faces, vertices)
+function Neighbors = findAdjacentNeighbors(PointCloudIn)
+
+if ~isfield(PointCloudIn, 'Location')
+    erorr('PointCloudIn must contain field ''Location''')
+end
+
+if ~isfield(PointCloudIn, 'Face')
+    erorr('PointCloudIn must contain field ''Face''')
+end
+
+if ~isfield(PointCloudIn, 'LocationCount')
+    warning('Adding field ''LocationCount'' to PointCloudIn')
+    PointCloudIn.LocationCount = length(PointCloudIn.Location);
+end
+
+if ~isfield(PointCloudIn, 'FaceCount')
+    warning('Adding field ''FaceCount'' to PointCloudIn')
+    PointCloudIn.FaceCount = length(PointCloudIn.Face);
+end
 
 
-NumVertices = size(vertices, 1);
-NumFaces = size(faces,1);
 
-%% Option 1: For loop
 
-Neighbors = cell(NumVertices,1);
 
-for i = 1 : NumFaces
-    Neighbors{faces(i,1)} = [Neighbors{faces(i,1)} [faces(i,2) faces(i,3)]];
-    Neighbors{faces(i,2)} = [Neighbors{faces(i,2)} [faces(i,3) faces(i,1)]];
-    Neighbors{faces(i,3)} = [Neighbors{faces(i,3)} [faces(i,1) faces(i,2)]];
+Neighbors = cell(PointCloudIn.LocationCount,1);
+
+for i = 1 : PointCloudIn.FaceCount
+    Neighbors{PointCloudIn.Face(i,1)} = [Neighbors{PointCloudIn.Face(i,1)} [PointCloudIn.Face(i,2) PointCloudIn.Face(i,3)]];
+    Neighbors{PointCloudIn.Face(i,2)} = [Neighbors{PointCloudIn.Face(i,2)} [PointCloudIn.Face(i,3) PointCloudIn.Face(i,1)]];
+    Neighbors{PointCloudIn.Face(i,3)} = [Neighbors{PointCloudIn.Face(i,3)} [PointCloudIn.Face(i,1) PointCloudIn.Face(i,2)]];
 end
 
 Neighbors = cellfun(@unique, Neighbors, 'UniformOutput', 0);
