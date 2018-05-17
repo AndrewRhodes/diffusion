@@ -23,7 +23,7 @@ SignalOut = zeros( NumVertices, NumSteps );
 
 for i = 1 : NumSteps
     
-    SignalOut(:,i) = Eplot * CPSignalIn;
+    SignalOut(:,i) = Eplot * CPSignalIn(:,i);
     
 end
 
