@@ -18,9 +18,9 @@ Error = zeros(NumSteps,1);
 if ShowPlot
     figure(1)
 end
-for i = 1 : NumSteps - 1
+for i = 1 : NumSteps
     
-    Error(i+1,1) = norm(TrueSignal(:,i+1) - DiffusedSignal(:,i+1), inf);
+    Error(i,1) = norm(TrueSignal(:,i) - DiffusedSignal(:,i), inf);
     
     
     if ShowPlot

@@ -81,7 +81,11 @@ PointCloud.Signal = SignalOriginal;
 
 FaceInterpolateWeights = interpBarycenterTriangle(PointCloud, CP, CPFACE);
 
-CPSignal = FaceInterpolateWeights * PointCloud.Signal;
+[CPTheta, CPPhi, CPRadius] = cart2sph(CP(:,1) ,CP(:,2), CP(:,3));
+
+CPSignal = TrueSignalModel(0, CPPhi);
+
+% CPSignal = FaceInterpolateWeights * PointCloud.Signal;
 
 
 

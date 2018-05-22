@@ -9,14 +9,13 @@ close all
 clear
 clc
 
-addpath('../../src/')
-ProjectRoot = setupprojectpaths; % Additional Paths
+global ProjectRoot;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005, 0.0025];%, 0.001];
+MCspacing = [0.25, 0.1, 0.05, 0.025, 0.01, 0.005];%, 0.0025, 0.001];
 MCporder = [1, 2, 3, 4, 5, 6, 7];
 
 MCError = zeros(length(MCspacing), 2, length(MCporder));
@@ -30,45 +29,35 @@ for MCp = 1 : length(MCporder)
         clearvars -except MCspacing MCporder MCs MCp MCError MCErrorAll ProjectRoot
         spacing = MCspacing(MCs)
         porder = MCporder(MCp)
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % User Defined Criteria
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        NumberDivisions = 3;
+        
+        NumberDivisions = 5;
         alpha = 1;
         
+%        porder = 5;
+        dim = 3;
+        Lorder = 4;
+%         spacing = 0.05;
+        Model = 'Icosphere';
         
-%         porder = 4; % order of interpolation
-        dim = 3; % dimension
-        Lorder = 2; % Cartesian Laplace order
-%         spacing = 0.1; % spacing of embedding grid
-        bandwidth = 1.002*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
+        ShowPlot = 0;
+        BDF = 2;
+        tauFraction = 1/8;
         
-        tauImplicit = spacing / 8; % time step
-        MaxTauImplicit = 1 / spacing;
-        NumStepsImplicit = round(MaxTauImplicit); %ceil(MaxTauImplicit / tauImplicit);
-        
-        ShowPlot = 1;
-        
-        ExactSignal = @(sigma, Phi) exp(-sigma^2)*sin(Phi);
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Setup File Name Directions
+        % Setup File Names
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        FileLocation = strcat(ProjectRoot,'/models/sphere/Icosphere/');
-        FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
+        FileLocationModel = strcat(ProjectRoot,'/models/sphere/');
+        FileNameModelPly = strcat(Model,num2str(NumberDivisions),'.ply');
+        FileNameModelOff = strcat(Model,num2str(NumberDivisions),'.off');
         
-        FileLocationCP = strcat(ProjectRoot,'/models/sphere/CPLaplace/');
-        FileNameIJK = strcat('IJK','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameCP = strcat('CP','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameCPFACE = strcat('CPFACE','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameDIST = strcat('DIST','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameXYZ = strcat('XYZ','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        
-        FileNameL = strcat('L','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameEplot = strcat('Eplot','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameEcp = strcat('Ecp','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameM = strcat('M','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
-        FileNameCPIn =strcat('CPIn','_Div',num2str(NumberDivisions),'_s',num2str(spacing),'_p',num2str(porder),'_l',num2str(Lorder),'.mat');
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,184 +65,195 @@ for MCp = 1 : length(MCporder)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         
-        if ~exist(fullfile(FileLocation, FileName), 'file')
-            
-            [Location, Faces] = icosphere(NumberDivisions);
-            [VerticesOut, FacesOut] = clearMeshDuplicates(Location, Faces );
-            
-            save_off(VerticesOut, FacesOut, fullfile(FileLocation, FileName))
-            
-            Sphere.Face = FacesOut;
-            Sphere.Location = VerticesOut;
-            
-        else
-            
-            [Sphere.Location, Sphere.Face] = read_off( fullfile(FileLocation, FileName) );
-            
-            [m, n] = size(Sphere.Location);
-            if m < n
-                Sphere.Location = Sphere.Location';
-            end
-            
-            [m, n] = size(Sphere.Face);
-            if m < n
-                Sphere.Face = Sphere.Face';
-            end
-            
-        end
-        
-        
-        %
-        % [xp, yp, zp] = sphere(100);
-        % Sphere.Location(:,1) = xp(:);
-        % Sphere.Location(:,2) = yp(:);
-        % Sphere.Location(:,3) = zp(:);
-        Sphere.LocationCount = length(Sphere.Location);
+        PointCloud = getIcosphere( fullfile(FileLocationModel, FileNameModelOff), NumberDivisions);
         
         
         
-        [Sphere.Theta, Sphere.Phi, Sphere.Radius] = cart2sph(Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3));
+        % % % % % % % % % %
+        tau = spacing * tauFraction;
+        MaxTau = 1 / spacing;
+        NumSteps = round(MaxTau);
+        % % % % % % % % % %
         
-        % SphericalHarmonic = makeRealSphericalHarmonic( MaxDegreeL, Sphere.Theta, Sphere.Phi );
+        
+        PointCloud.LocationCount = size(PointCloud.Location,1);
+        PointCloud.FaceCount = size(PointCloud.Face, 1);
+        PointCloud.FaceArea = findFaceArea(PointCloud.Location,PointCloud.Face);
         
         
-        % Define the signal
-        % ExactSignal = @(sigma, SignalOriginal, MaxDegreeL) sum(cell2mat(cellfun(@times, num2cell( (exp(-(sigma^2/2).*(1:MaxDegreeL).*((1:MaxDegreeL)+1))')), SignalOriginal, 'UniformOutput', 0)),1);
-        % ExactSignal = @(sigma, Theta) exp(-sigma^2/2)*cos(Theta);
+        [PointCloud.Theta, PointCloud.Phi, PointCloud.Radius] = cart2sph(PointCloud.Location(:,1) ,PointCloud.Location(:,2), PointCloud.Location(:,3));
         
-        % SignalOriginal = ExactSignal(0, SphericalHarmonic, MaxDegreeL);
-        SignalOriginal = ExactSignal(0, Sphere.Phi);
-        % SignalOriginal = zeros(Sphere.LocationCount,1);
-        % SignalPositions = find(Sphere.Theta == 0 & Sphere.Phi == pi/2);
-        % SignalOriginal(SignalPositions) = ones(size(SignalPositions));
-        % SignalOriginal(1) = 1;
-        Sphere.Signal = SignalOriginal;
+        TrueSignalModel = @(sigma, Phi) exp(-sigma^2)*sin(Phi);
+        
+        
+        SignalOriginal = TrueSignalModel(0, PointCloud.Phi);
+        
+        PointCloud.Signal = SignalOriginal;
+        
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Setup Laplace-Beltrami
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        
+        [ItL, Eplot, CP, CPFACE] = makeImplicitLaplaceBeltrami( PointCloud, porder, Lorder, spacing, dim, BDF, tau, alpha);
+        
+        FaceInterpolateWeights = interpBarycenterTriangle(PointCloud, CP, CPFACE);
+        
+        [CPTheta, CPPhi, CPRadius] = cart2sph(CP(:,1) ,CP(:,2), CP(:,3));
+        
+        CPSignal = TrueSignalModel(0, CPPhi);
+        
+        % CPSignal = FaceInterpolateWeights * PointCloud.Signal;
+        
+        
+        
+        ScaleParameter = findScaleParamter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
+        
+        
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Construct the Laplace Beltrami
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        MinPoint = min(Sphere.Location) - bandwidth - spacing;
-        MaxPoint = max(Sphere.Location) + bandwidth + spacing;
         
-        % MinPoint = [-3, -3, -3];
-        % MaxPoint = [3, 3, 3];
+        % BandSearchSize = [length(y1d), length(x1d), length(z1d)];
+        % BandInit = sub2ind(BandSearchSize, IJK(:,1), IJK(:,2), IJK(:,3));
         
-        x1d = (MinPoint(1):spacing:MaxPoint(1))';
-        y1d = (MinPoint(2):spacing:MaxPoint(2))';
-        z1d = (MinPoint(3):spacing:MaxPoint(3))';
+        % BandInit = find(abs(DIST) <= bandwidth);
+        
+        % FaceInterpolateWeights = interpBarycenterTriangle(Sphere, CP, CPFACE);
+        
+        % CPSignal = FaceInterpolateWeights * Sphere.Signal;
+        
+        % CPInit = CP(BandInit, :);
+        %
+        % XYZInit = XYZ(BandInit, :);
         
         
-%         [IJK,DIST,CP,XYZ,CPFACE] = tri2cp(Sphere.Face, Sphere.Location, spacing, MinPoint, porder, Lorder/2);
+        % if ~exist(fullfile(FileLocationCP, FileNameL), 'file') || ~exist(fullfile(FileLocationCP, FileNameEcp), 'file') || ~exist(fullfile(FileLocationCP, FileNameEplot), 'file') || ~exist(fullfile(FileLocationCP, FileNameM), 'file')
         
+        %     XYZInit = XYZ(BandInit,:);
+        %     CPInit = CP(BandInit,:);
+        %
+        %     [L, Ecp, R, BandInner, BandOuter, BandInnerFull, BandOuterFull] = ...
+        %         ops_and_bands3d(x1d, y1d, z1d, XYZInit(:,1), XYZInit(:,2), XYZInit(:,3), ...
+        %         CPInit(:,1), CPInit(:,2), CPInit(:,3), BandInit, porder, Lorder);
+        %
+        %     CPIn = CPInit(BandInner,:);
         
-%         BandSearchSize = [length(x1d), length(y1d), length(z1d)];
-%         
-%         Band = sub2ind(BandSearchSize, IJK(:,1), IJK(:,2), IJK(:,3));
-        
-%         BandInit = find(abs(DIST) <= 1.5*bandwidth);
-        
-%         FaceInterpolateWeights = interpBarycenterTriangle(Sphere, CP, CPFACE);
-        
-%         CPSignal = FaceInterpolateWeights * Sphere.Signal;
-        % CPSignal = zeros(length(CP),1);
-        % CPSignalLocations = find(CP(:,1) == -1 & CP(:,2) == 0 & CP(:,3) == 0);
-        % CPSignal(CPSignalLocations, 1) = ones(size(CPSignalLocations));
-        % CPSignal(CPSignalLocations(1), 1) = 1;
-        
-        [GridX, GridY, GridZ] = meshgrid(x1d, y1d, z1d);
-        [CP(:,1), CP(:,2), CP(:,3), dist] = cpSphere(GridX(:), GridY(:), GridZ(:));
-        
+        % Create L, E, M
+        %     Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder);
+        %     [EcpRow, EcpCol, EcpVal] = find(Ecp);
+        %     BandInner = unique(EcpCol);
+        %
+        %     L = laplacian_3d_matrix(x1d, y1d,z1d, Lorder, BandInner, BandInit);
+        %     [LRow, LCol, LVal] = find(L);
+        %     BandOuterTemp = unique(LCol);
+        %     BandOuter = BandInit( BandOuterTemp );
+        %
+        %     Ecp = Ecp(BandOuterTemp, BandInner);
+        %     L = L(:, BandOuterTemp);
         %
         %
-        BandInit = find(abs(dist) <= bandwidth);
         %
-        CPInit = CP(BandInit, :);
+        %     InnerInOuter = zeros(size(BandInner));
+        %     R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
+        %     for i = 1 : length(BandInner)
+        %         I = find(BandOuter == BandInner(i));
+        %         InnerInOuter(i) = I;
+        %         R(i,I) = 1;
+        %     end
+        %
+        %
+        %     M = lapsharp_unordered(L, Ecp, R);
+        %
+        %     Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, BandInnerFull);
+        % %
+        %     CPOut = CPInit(BandOuterTemp,:);
+        %     CPIn = R*CPOut;
         
-        [th, phi, r] = cart2sph(GridX, GridY, GridZ);
-
+        
+        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Matric Construction
+        % Diffusion of Signal
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-%         L = laplacian_3d_matrix(x1d, y1d, z1d, Lorder, Band);
+        CPSignalDiffused = performBDFDiffusion(CPSignal, NumSteps, ItL);
         
-%         Eplot = interp3_matrix(x1d, y1d, z1d, Sphere.Location(:,1), Sphere.Location(:,2), Sphere.Location(:,3), porder, Band);
-%         % Eplot = interpLagrange3D(BandSearchSize, MinPoint, PointCloud.Location, porder, Band, spacing);
+        Signal = performEplotProjection(CPSignalDiffused, Eplot);
         
-%         Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder, Band);
-%         % Ecp = interpLagrange3D(BandSearchSize, MinPoint, CP, porder, Band, spacing);
         
-%         M = lapsharp(L, Ecp);
+        TrueSignal = makeTrueSignalSphere(TrueSignalModel, NumSteps, ScaleParameter, PointCloud.Phi);
         
-%         M = M - diag(diag(M));
-%         M = M - diag(sum(M,2));
+        Error = findDiffusionError(TrueSignal, Signal, NumSteps, PointCloud.Phi, ShowPlot);
         
         
         
-        Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder);
-        [EcpRow, EcpCol, EcpVal] = find(Ecp);
-        BandInner = unique(EcpCol);
-        
-        L = laplacian_3d_matrix(x1d, y1d,z1d, Lorder, BandInner, BandInit);
-        [LRow, LCol, LVal] = find(L);
-        BandOuterTemp = unique(LCol);
-        BandOuter = BandInit( BandOuterTemp );
-        
-        CPOut = CPInit(BandOuterTemp,:);
-        
-%         Reform the L, Ecp matrices
-        Ecp = Ecp(BandOuterTemp, BandInner);
-        L = L(:, BandOuterTemp);
         
         
         
-        [xp,yp,zp] = sphere(64);
-        [th_plot, phi_plot, r] = cart2sph(xp(:),yp(:),zp(:));
-        
-        SignalOriginal = ExactSignal(0, phi_plot);
-        Sphere.Signal = SignalOriginal;
         
         
-        Eplot = interp3_matrix(x1d, y1d, z1d, xp(:), yp(:), zp(:), porder, BandInner);
         
-        Sphere.Phi = phi_plot;
+        
+        
+        
+        
+        
+        
+        
+        %         Ecp = interp3_matrix(x1d, y1d, z1d, CP(:,1), CP(:,2), CP(:,3), porder);
+        %         [EcpRow, EcpCol, EcpVal] = find(Ecp);
+        %         BandInner = unique(EcpCol);
+        %
+        %         L = laplacian_3d_matrix(x1d, y1d,z1d, Lorder, BandInner, BandInit);
+        %         [LRow, LCol, LVal] = find(L);
+        %         BandOuterTemp = unique(LCol);
+        %         BandOuter = BandInit( BandOuterTemp );
+        %
+        %         CPOut = CPInit(BandOuterTemp,:);
+        %
+        % %         Reform the L, Ecp matrices
+        %         Ecp = Ecp(BandOuterTemp, BandInner);
+        %         L = L(:, BandOuterTemp);
+        %
+        %
+        %
+        %         [xp,yp,zp] = sphere(64);
+        %         [th_plot, phi_plot, r] = cart2sph(xp(:),yp(:),zp(:));
+        %
+        %         SignalOriginal = ExactSignal(0, phi_plot);
+        %         Sphere.Signal = SignalOriginal;
+        %
+        %
+        %         Eplot = interp3_matrix(x1d, y1d, z1d, xp(:), yp(:), zp(:), porder, BandInner);
+        %
+        %         Sphere.Phi = phi_plot;
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Restriction Operator
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        InnerInOuter = zeros(size(BandInner));
-        R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
-        
-        for i = 1 : length(BandInner)
-           I = find(BandOuter == BandInner(i));
-           InnerInOuter(i) = I;
-           R(i,I) = 1;
-        end
-        
-        CPIn = R*CPOut;
+        %         InnerInOuter = zeros(size(BandInner));
+        %         R = sparse([],[],[], length(BandInner), length(BandOuter), length(BandInner));
+        %
+        %         for i = 1 : length(BandInner)
+        %            I = find(BandOuter == BandInner(i));
+        %            InnerInOuter(i) = I;
+        %            R(i,I) = 1;
+        %         end
+        %
+        %         CPIn = R*CPOut;
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Define the Signal and Plot Matrix
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        [CPTheta, CPPhi, CPRadius] = cart2sph(CP(:,1), CP(:,2), CP(:,3));
-        
-        
-        % [CPTheta, CPPhi, CPRadius] = cart2sph(CPIn(:,1), CPIn(:,2), CPIn(:,3));
-        
-        % SphericalHarmonicCP = makeRealSphericalHarmonic( MaxDegreeL, CPTheta, CPPhi );
-        
-        % CPSignal = ExactSignal(0, SphericalHarmonicCP, MaxDegreeL);
-        % CPSignal = ExactSignal(0, Sphere.Theta);
-        % CPSignal = zeros(length(CPTheta),1);
-        % CpSignalPositions = find(CPPhi == 0);
-        % CPSignal(CpSignalPositions) = ones(length(CpSignalPositions),1);
-        % CPSignal(1) = 1;
+        %         [CPTheta, CPPhi, CPRadius] = cart2sph(CP(:,1), CP(:,2), CP(:,3));
         
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -261,99 +261,22 @@ for MCp = 1 : length(MCporder)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         
-        M = lapsharp_unordered(L, Ecp, R);
-        
-        
-        ItM = speye(size(M)) - alpha*tauImplicit * M;
-        
-        I23tM = speye(size(M)) - (2/3)*alpha*tauImplicit * M;
-        
-%         I611tM = speye(size(M)) - (6/11)*alpha*tauImplicit * M;
-%         
-%         I1225tM = speye(size(M)) - (12/25)*alpha*tauImplicit * M;
-        
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Scale Parameter Estimation
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        ScaleParameter = findScaleParamter(tauImplicit, 2*alpha, NumStepsImplicit, 'natural', '3d');
-        
-        
+        %         M = lapsharp_unordered(L, Ecp, R);
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Perform Diffusion
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        CPSignal = ExactSignal(0, CPPhi);
-        CPSignal = CPSignal(BandInner,:);
+        %         CPSignal = ExactSignal(0, CPPhi);
+        %         CPSignal = CPSignal(BandInner,:);
         
-        Signal = zeros(length(CPSignal), NumStepsImplicit);
-        Signal(:,1) = CPSignal;
+        %         Signal = zeros(length(CPSignal), NumStepsImplicit);
+        %         Signal(:,1) = CPSignal;
         
-%         SignalAtVertex = zeros(Sphere.LocationCount, NumStepsImplicit);
-        SignalAtVertex = zeros(numel(xp), NumStepsImplicit);
-        
-        SignalAtVertex(:,1) = SignalOriginal;
-        
-        AbsErr = zeros(NumStepsImplicit,1);
+        %         SignalAtVertex = zeros(numel(xp), NumStepsImplicit);
         
         
-        WaitBar = waitbar(0, sprintf('Implicit Euler Diffusion %i of %i', 0, NumStepsImplicit-1));
-        if ShowPlot
-            figure(1)
-        end
-        
-        for i = 1 : NumStepsImplicit - 1
-            
-                if i == 1
-                    [Signal(:,i+1), flag] = bicg(ItM, Signal(:,i), 1e-10, 100);
-                else%if i == 2
-                    [Signal(:,i+1), flag] = bicg(I23tM, (4/3)*Signal(:,i) - (1/3)*Signal(:,i-1), 1e-10, 100);
-            %     elseif i == 3
-            %         [Signal(:,i+1), flag] = bicg(I611tM, (18/11)*Signal(:,i) - (9/11)*Signal(:,i-1) + (2/11)*Signal(:,i-2), 1e-10, 100);
-            %     else
-            %         [Signal(:,i+1), flag] = bicg(I1225tM, (48/25)*Signal(:,i)-(36/25)*Signal(:,i-1) + (16/25)*Signal(:,i-2) - (3/25)*Signal(:,i-3), 1e-10, 100);
-                end
-            
-            
-            
-            % Interpolate back to explicit surface
-            SignalAtVertex(:,i+1) = Eplot * Signal(:,i+1);
-            
-            if flag
-                disp(flag)
-            end
-            
-            % Calculate Truth and Error
-            Truth = ExactSignal(ScaleParameter(i+1), phi_plot);
-            
-            AbsErr(i+1,1) = norm(Truth - SignalAtVertex(:,i+1), inf);
-            
-            
-            if ShowPlot
-                clf
-                plot(Sphere.Phi, SignalOriginal,'ko')
-                hold on
-                plot(Sphere.Phi, Truth, 'gd')
-                plot(Sphere.Phi, SignalAtVertex(:,i+1),'r.')
-                legend('Original', 'Truth at i', 'Diffused at i')
-                
-            end
-            
-            waitbar(i/NumStepsImplicit, WaitBar, sprintf('Implicit Euler Diffusion %i of %i', i, NumStepsImplicit-1));
-            
-        end
-        
-        waitbar(i/NumStepsImplicit, WaitBar, sprintf('Diffusion Complete'));
-        close(WaitBar)
-        
-        if ShowPlot
-            close(figure(1))
-        end
-        
-        
-        MCError(MCs, 1:2, MCp) = [NumStepsImplicit, AbsErr(NumStepsImplicit - 1)];
-        MCErrorAll{MCs, MCp} = [(1:NumStepsImplicit)', AbsErr];
+        MCError(MCs, 1:2, MCp) = [NumSteps, Error(NumSteps - 1)];
+        MCErrorAll{MCs, MCp} = [(1:NumSteps)', Error];
         
     end
 end
@@ -364,15 +287,73 @@ end
 
 
 
-figure
-loglog((1:NumStepsImplicit)', AbsErr)
-xlabel('Iteration Number')
-ylabel('Relative Error')
+colors = ['k','k','b','m','k','c','g','r'];
+shapes = {'','','^','p','s','o','*','+'};
+lin  = {':','-.','--','-','-','-','-.',':','--'};
+msizes = [8, 8, 8, 8, 17, 14, 12, 8];
 
-figure
-plot(1:NumStepsImplicit, AbsErr)
-xlabel('Iteration Number')
-ylabel('Relative Error')
+Points = zeros(size(MCErrorAll,1),2, size(MCErrorAll,2));
+for j = 1 : size(MCErrorAll,2)
+    for i = 1 : size(MCErrorAll,1)
+        Points(i,1:2,j) = [MCErrorAll{i,j}(end,1), MCErrorAll{i,j}(end,2)];
+    end
+end
+
+
+figure('units','normalized','outerposition',[0 0 1 1])
+for i = [1,3,5,7]%1 : size(Points,3)
+    loglog( Points(:,1,i), Points(:,2,i), strcat(colors(i), shapes{i}, lin{i}), 'linewidth', 3, 'markersize', msizes(i) )
+    hold on
+end
+
+
+
+
+% % % 2nd Order Line
+logx = [100,500];
+logy = (10*10^(0)).*logx.^(-2);
+loglog(logx, logy,'k-','linewidth',3)
+
+% xl=get(gca,'XLim');
+% yl=get(gca,'YLim');
+text1 = text(15,10*10^(-4.4),'$1^{st}$ Order','Interpreter','latex');
+set(text1,'Rotation',-16)
+set(text1,'FontSize',50)
+
+
+
+% % % % 0th Order Line
+% logx = [10,50];
+% logy = (10*10^(-1.5)).*logx.^(0);
+% loglog(logx, logy,'k-','linewidth',3)
+%
+% % xl=get(gca,'XLim');
+% % yl=get(gca,'YLim');
+% text1 = text(15,10*10^(-1.4),'$0^{th}$ Order','Interpreter','latex');
+% set(text1,'Rotation',0)
+% set(text1,'FontSize',50)
+
+% % % Axis Labels
+xlabel('N')
+ylabel('$\| $error$ \|_{\infty}$','Interpreter','latex')
+ax = gca;
+ax.XAxis.FontSize = 50;
+ax.YAxis.FontSize = 50;
+
+
+
+xlim([10*10^(-0.75) 10*10^(1.4)])
+
+xticks([10e0 10e1 10e2 10e3])
+yticks([10e-10, 10e-8, 10e-6, 10e-5,10e-4,10e-3, 10e-2, 10e0, 10e2, 10e4])
+yticklabels({'10e-10','10e-8','10e-6','10e-5','10e-4','10e-3', '10e-2', '10e0', '10e2', '10e4'})
+
+
+hleg = legend({'$m_\sigma = 1$','$m_\sigma = 2$','$m_\sigma = 3$','$m_\sigma = 4$','$m_\sigma = 5$','$m_\sigma = 6$','$m_\sigma = 7$','$m_\sigma = 8$'},'Interpreter','latex');
+set(hleg, 'position', [0.80 0.58 0.07 0.2], 'FontSize', 35)
+
+
+
 
 
 

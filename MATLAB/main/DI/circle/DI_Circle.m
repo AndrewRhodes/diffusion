@@ -9,8 +9,7 @@ close all
 clear
 clc
 
-addpath('../src/')
-ProjectRoot = setupprojectpaths % Additional Paths
+global ProjectRoot; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -22,14 +21,14 @@ porder = 4;
 dim = 2;
 Lorder = 2;
 spacing = 0.01;
-bandwidth = 1.002*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
+% bandwidth = 1.002*spacing*sqrt((dim-1)*((porder+1)/2)^2 + ((Lorder/2+(porder+1)/2)^2));
 
-tauImplicit = spacing / 8;
-MaxTauImplicit = 1/spacing;
-NumStepsImplicit = round(MaxTauImplicit); 
+% tauImplicit = spacing / 8;
+% MaxTauImplicit = 1/spacing;
+% NumStepsImplicit = round(MaxTauImplicit); 
 
-% ExactSignal = @(sigma, theta) exp(-sigma^2/2)*cos(theta) + exp(-9*sigma^2/2)*sin(3*theta);
-ExactSignal = @(sigma, theta) exp(-sigma^2/2)*cos(theta);
+ExactSignal = @(sigma, theta) exp(-sigma^2/2)*cos(theta) + exp(-9*sigma^2/2)*sin(3*theta);
+% % % ExactSignal = @(sigma, theta) exp(-sigma^2/2)*cos(theta);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
