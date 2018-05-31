@@ -9,29 +9,6 @@ function Keypoint = findKeypoint(DoG, ScaleParameter, Neighbors)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 NumFeatures = 0;
 
 isFeaturePoint = 0;
@@ -66,7 +43,6 @@ for i = 1 : NumVertices
         end
         
         if isFeaturePoint
-            NumFeatures = NumFeatures + 1;
             Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j);
             Keypoint.Location(NumFeatures, 1) = i;
             Keypoint.Level(NumFeatures, 1) = j;
