@@ -27,6 +27,7 @@ Model = 'bunny/Bunny';
 
 BDF = 1;
 tauFraction = 1/2;
+maxTauNumer = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the Model
@@ -55,7 +56,7 @@ NormalRotations = findNormalsRotation(PointCloud.Normal);
 
 % % % % % % % % % %
 tau = spacing * tauFraction;
-MaxTau = 1 / spacing;
+MaxTau = maxTauNumer / spacing;
 NumSteps = round(MaxTau);
 % % % % % % % % % %
 

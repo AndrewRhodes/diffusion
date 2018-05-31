@@ -50,15 +50,14 @@ PointCloud = findMeshNormals(PointCloud);
 NormalRotations = findNormalsRotation(PointCloud.Normal);
 
 
-
 % % % % % % % % % %
 tau = PointCloud.Resolution * tauFraction;
-MaxTau = 1 / PointCloud.Resolution;
+MaxTau = 10 / PointCloud.Resolution;
 NumSteps = round(MaxTau);
 % % % % % % % % % %
 
 
-Neighbors = findAdjacentNeighbors(PointCloud);
+[Neighbors, NeighborFaces] = findAdjacentNeighbors(PointCloud, 'distance');
 
 [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors);
 
@@ -71,7 +70,14 @@ PointCloud.Signal = MK;
 ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Scale Parameters
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 ScaleParameter = findScaleParamter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
+
+ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Diffusion of Mean Curvature
@@ -95,7 +101,7 @@ DoG = buildDoG(Signal, ScaleParameter, 1);
 Keypoint = findKeypoint(DoG, ScaleParameter, Neighbors);
 
 
-SubKeypoint = findSubKeypoint(PointCloud, NormalRotations, DoG, Keypoint, Neighbors);
+SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
 
 
 

@@ -39,7 +39,6 @@ FileLocation = '../models/Sphere/';
 FileName = strcat('Icosphere',num2str(NumberDivisions),'.off');
 
 
-tauImplicit = spacing / 8;
 MaxTauImplicit = 1/spacing;
 NumSteps = round(MaxTauImplicit); % 5000 ; %
 

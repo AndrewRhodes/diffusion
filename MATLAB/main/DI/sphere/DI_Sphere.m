@@ -28,7 +28,7 @@ Model = 'Icosphere';
 ShowPlot = 1;
 BDF = 1;
 tauFraction = 1/2;
-
+maxTauNumer = 1;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -52,7 +52,7 @@ PointCloud = getIcosphere( fullfile(FileLocationModel, FileNameModelOff), Number
 
 % % % % % % % % % %
 tau = spacing * tauFraction;
-MaxTau = 1 / spacing;
+MaxTau = maxTauNumer / spacing;
 NumSteps = round(MaxTau);
 % % % % % % % % % %
 
