@@ -1,4 +1,4 @@
-function plywrite(filename,faces,verts,varargin)
+function ply_write(filename,faces,verts,varargin)
 % plywrite(filename,faces,verts)
 % Will write a face vertex mesh data in ply format.
 % faces -> polygonal descriptions in terms of vertex indices

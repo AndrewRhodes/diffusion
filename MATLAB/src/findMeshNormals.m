@@ -69,7 +69,32 @@ PointCloudIn.Normal = bsxfun(@rdivide, PointCloudIn.Normal, sqrt(sum(PointCloudI
 PointCloudIn.Normal = - PointCloudIn.Normal;
 
 
+
+% Clean up instances of Normals of NaN.
+NanNormal = find(isnan(PointCloudIn.Normal(:,1)))
+
+for i = 1 : length(NanNormal)
+    
+    [row, ~] = ind2sub([PointCloudIn.FaceCount, 3], find(PointCloudIn.Face == NanNormal(i)));
+    
+    NeighborPoints = unique(PointCloudIn.Face(row,:));
+    NeighborPoints(NeighborPoints == NanNormal(i)) = [];
+    NeighborNormals = PointCloudIn.Normal(NeighborPoints,:);
+    NeighborNormals = reshape(NeighborNormals(~isnan(NeighborNormals)),[],3);
+    PointCloudIn.Normal(NanNormal(i),:) = sum(NeighborNormals,1)/size(NeighborNormals,1);
+    
+    
 end
+
+
+
+
+
+
+end
+
+
+
 
 
 

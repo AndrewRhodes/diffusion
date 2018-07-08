@@ -56,30 +56,36 @@ for i = 1 : PointCloudIn.LocationCount
     
     % LLS because these are points on a model (exact)
     A = [x.^2, y.^2, x.*y, x, y, -f, ones(size(x))];
-    [~,~,V] = svd(A);
-    Coeff = V(:,7) / V(7,7);
-    
-%     A = [x.^2, y.^2, x.*y, x, y, ones(size(x))];
-%     Coeff = (A'*A) \ (A'*f); % A \ f; %
+%     i
+    if any(isnan(A(:))) || any(isinf(A(:)))
+        i
+        PK1(i,1) = 0;
+        PK2(i,1) = 0;
+    else
+        [~,~,V] = svd(A);
+        Coeff = V(:,7) / V(7,7);
 
-    % Create Hessian
-    % Second Derivative
-    H = [2*Coeff(1), Coeff(3);
-         Coeff(3), 2*Coeff(2)];
-     
-    % Find the principal curvatures and directions
-    [P1, P2, K1, K2] = findPrincipalCurvature(H);
-%     [vec,val] = eig(H,'vector');
-    
-    RotatedVec = [0, P1; 0, P2] * NormalRotationsIn(:,:,i)';
-%     RotatedVec = bsxfun(@rdivide, RotatedVec, sqrt(sum(RotatedVec.^2,2)));
-    
-    PD1(i,:) = RotatedVec(1,:) / sqrt(sum(RotatedVec(1,:).^2));
-    PD2(i,:) = RotatedVec(2,:) / sqrt(sum(RotatedVec(2,:).^2));
-    PK1(i,1) = K1;
-    PK2(i,1) = K2;
-    
+    %     A = [x.^2, y.^2, x.*y, x, y, ones(size(x))];
+    %     Coeff = (A'*A) \ (A'*f); % A \ f; %
 
+        % Create Hessian
+        % Second Derivative
+        H = [2*Coeff(1), Coeff(3);
+             Coeff(3), 2*Coeff(2)];
+
+        % Find the principal curvatures and directions
+        [P1, P2, K1, K2] = findPrincipalCurvature(H);
+    %     [vec,val] = eig(H,'vector');
+
+        RotatedVec = [0, P1; 0, P2] * NormalRotationsIn(:,:,i)';
+    %     RotatedVec = bsxfun(@rdivide, RotatedVec, sqrt(sum(RotatedVec.^2,2)));
+
+        PD1(i,:) = RotatedVec(1,:) / sqrt(sum(RotatedVec(1,:).^2));
+        PD2(i,:) = RotatedVec(2,:) / sqrt(sum(RotatedVec(2,:).^2));
+        PK1(i,1) = K1;
+        PK2(i,1) = K2;
+    
+    end
 end
 
 
@@ -90,7 +96,6 @@ MK = 0.5*(PK1+PK2);
 GK = PK1.*PK2;
  
 end
-
 
 
 
@@ -135,6 +140,7 @@ else % abs(lambda2) > abs(lambda1)
 end
 
 end
+
 
 
 

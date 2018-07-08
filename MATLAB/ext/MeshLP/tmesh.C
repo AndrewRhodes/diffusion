@@ -65,23 +65,23 @@ void get_color(double v, double minv, double maxv, double c[3])
 
   	if(fabs(nnv) < MYNZERO){
    	for(int j = 0; j < 3; j ++)
- 	   	c[j] = scale * __partcolorgrtable[15][j]; 		
+ 	   	c[j] = scale * __partcolorgrtable[15][j];
 		return;
   	}
-  
+
   //---------------------------------------------------------------------------------------
   //warm to cold
   int minc = 0, maxc = 30;
   if(v <= minv){
     for(int j = 0; j < 3; j ++)
-      c[j] = scale * __partcolorgrtable[minc][j]; 
+      c[j] = scale * __partcolorgrtable[minc][j];
     return;
   }
-  
+
   if(v >= maxv){
     for(int j = 0; j < 3; j ++)
       c[j] = scale * __partcolorgrtable[maxc][j];
-    return; 
+    return;
   }
   double vs = (v - minv) / nnv * (maxc - minc);
 
@@ -94,36 +94,36 @@ void get_color(double v, double minv, double maxv, double c[3])
 /*
   //---------------------------------------------------------------------------------------
   //grey scale
-  
+
   double maxc = 0, minc = 0.5;
-  
+
   if(v <= minv) { c[0] = c[1] = c[2] = minc; return; }
   if(v >= maxv) { c[0] = c[1] = c[2] = maxc; return; }
 
   double t = (v - 1) / nnv;
   c[0] = c[1] = c[2] = minc  + (maxc - minc) * t;
-  
+
   //---------------------------------------------------------------------------------------
-*/  
+*/
 }
 
 
 bool TMesh::ReadOffFile(char *filename)
 {
   string str(filename);
-  OffFileReader reader(str);    
-  
+  OffFileReader reader(str);
+
   if(reader.bad)
     return false;
-    
+
   OffObj obj;
   if( reader.get_next_off_object(obj) ){
-      
+
     for(unsigned int i = 0; i < obj.vertices.size(); i ++){
       add_vertex( VTMesh( obj.vertices[i].x, obj.vertices[i].y, obj.vertices[i].z) );
     }
     for(unsigned int i = 0; i < obj.facets.size(); i ++){
-    
+
       if(obj.facets[i].size() != 3){
         cerr<<"Error: invalid triangle mesh."<<endl;
         return false;
@@ -131,7 +131,7 @@ bool TMesh::ReadOffFile(char *filename)
       unsigned int fid = add_facet( FTMesh( (obj.facets[i])[0], (obj.facets[i])[1], (obj.facets[i])[2]) );
       assert(fid == i);
     }
-    
+
   	//get the bounding box of mesh
 	GetBBox();
    //Generate the topology for tmesh
@@ -142,7 +142,7 @@ bool TMesh::ReadOffFile(char *filename)
    //PrintMeshTopo();
    //getchar();
 
-    
+
   	return true;
   }else{
     return false;
@@ -156,14 +156,14 @@ bool TMesh::ReadOffFile(char *filename, bool wcolor)
   if( !fin_temp.good() ){
     return false;
   }
-  
+
   ofstream fout_temp;
 	fout_temp.open("temp.m");
   if(!fout_temp.good()){
     cerr<<"Failed to open file temp.m"<<endl;
     return false;
   }
-  
+
 	// Read the off file and skip the comments.
 	// Write the comment-less off file to a file, called "temp.m".
 	while(! fin_temp.eof()){
@@ -176,8 +176,8 @@ bool TMesh::ReadOffFile(char *filename, bool wcolor)
 	}
 	fin_temp.close();
 	fout_temp.close();
-			  
-	
+
+
 	FILE *fp;
 	if( (fp = fopen("temp.m", "r")) == NULL ){
 		cerr<<"Failed to open file temp.m"<<endl;
@@ -186,9 +186,9 @@ bool TMesh::ReadOffFile(char *filename, bool wcolor)
 
 	unsigned int n_ver, n_facet, n_edge;
 	fscanf(fp, "%d %d %d", &n_ver, &n_facet, &n_edge);
-  
+
 //  cerr<<"n_ver: "<<n_ver<<" n_facet: "<<n_facet<<endl;
-  
+
 	float x, y, z;
 	//vertex information
 	for(unsigned int i = 0; i < n_ver; i ++){
@@ -196,18 +196,18 @@ bool TMesh::ReadOffFile(char *filename, bool wcolor)
     //cerr<<"x y z"<<x<<" "<<y<<" "<<z<<endl;
 		//VTMesh v(x, y, z);
     add_vertex( VTMesh(x, y, z) );
-	}		
+	}
 
-	//cout<<"vertex done"<<endl;	
-	
-	//facet information	
+	//cout<<"vertex done"<<endl;
+
+	//facet information
   int nv, vid0, vid1, vid2;
   float r, g, b, a;
 	for(unsigned int i = 0; i < n_facet; i ++){
 		fscanf(fp, "%d %d %d %d", &nv, &vid0, &vid1, &vid2);
     if(wcolor) fscanf(fp, "%f %f %f %f", &r, &g, &b, &a);
-	
-    
+
+
     unsigned int fid = add_facet( FTMesh(vid0, vid1, vid2) );
     assert(fid == i);
 	}
@@ -215,7 +215,7 @@ bool TMesh::ReadOffFile(char *filename, bool wcolor)
 
 	assert(v_count() == n_ver);
 	assert(f_count() == n_facet);
-  
+
 	//get the bounding box of mesh
 	GetBBox();
 
@@ -246,7 +246,7 @@ void TMesh::GenerateMeshTopo()
 	 	vertex(vid0).add_facet(i);
     	vertex(vid1).add_facet(i);
     	vertex(vid2).add_facet(i);
-    
+
     	vertex(vid0).add_unique_vert(vid1);
     	vertex(vid1).add_unique_vert(vid0);
     	vertex(vid1).add_unique_vert(vid2);
@@ -255,15 +255,10 @@ void TMesh::GenerateMeshTopo()
     	vertex(vid0).add_unique_vert(vid2);
 	}
 	//cerr<<"facet done"<<endl;
-
 	for(unsigned int i = 0; i < f_count(); i ++)
 	{
-  		//cout<<"fid: "<<i<<endl;
-  
-		//iterate over all facets	
+		//iterate over all facets
 		for(int j = 0; j < 3; j ++){
-    	//cout<<j<<"th vertex "<<endl;
-  
 	  	//edge vert(j) -- vert((j + 1) % 3)
     	vid1 = facet(i).vert(j);
     	vid2 = facet(i).vert((j + 1) % 3);
@@ -272,28 +267,26 @@ void TMesh::GenerateMeshTopo()
       		unsigned int fid = vertex(vid1).facet(fit);
 			if(fid <= i) continue;
 
-      	//cout<<"connected facet: "<<fid<<endl;
-			
 			int i1, i2;
 			if( (i2 = facet(fid).index(vid2)) == -1 ) continue;
 			i1 = facet(fid).index(vid1);
-			assert(i1 >= 0);			
-			
+			assert(i1 >= 0);
+
 			if( facet(i).facet((j + 2) % 3) >= 0){
-        		cerr<<"non-manifold1: "<<i<<"--"<<fid<<" along edge: "<<vid1<<" "<<vid2<<endl;
+        		cerr<<"non-manifold1: "<<i<<" : "<<fid<<" along edge: "<<vid1<<" : "<<vid2<<endl;
         		continue;
-      	}  
-			
+      	}
+
 			for(int k = 0; k < 3; k ++){
-				if(k != i1 && k != i2){ 
+				if(k != i1 && k != i2){
 					if(facet(fid).facet(k) >= 0){
             		cerr<<"non-manifold1: "<<i<<"--"<<fid<<" along edge: "<<vid1<<" "<<vid2<<endl;
-         		}  
-					else{ //Only when both facets have not neighbouring facet along 
-                		//this edge can they be the neighbouring faect for each other. 
+         		}
+					else{ //Only when both facets have not neighbouring facet along
+                		//this edge can they be the neighbouring faect for each other.
 						facet(fid).set_facet(k, i);
             		facet(i).set_facet((j + 2) % 3, fid);
-         		}  
+         		}
 					break;
 				}
 			}//for k
@@ -301,7 +294,6 @@ void TMesh::GenerateMeshTopo()
 	}//for j
 	}//for i
 	//cout<<"topo done"<<endl;
-
 	//set boundary flag
 	//for particle
 	for(unsigned int i = 0; i < f_count(); i ++){
@@ -318,11 +310,11 @@ void TMesh::GenerateMeshTopo()
 }
 
 //--------------------------------------------------
-//MarkNonManifoldness: 
+//MarkNonManifoldness:
 //----------------
-//Check the non_manifoldness for each vertex and mark 
-//the vertex and all the incident facets if it is a 
-//non_manifold vertex. 
+//Check the non_manifoldness for each vertex and mark
+//the vertex and all the incident facets if it is a
+//non_manifold vertex.
 //--------------------------------------------------
 void TMesh::MarkNonManifoldness()
 {
@@ -334,10 +326,10 @@ void TMesh::MarkNonManifoldness()
     fid = vert.facet(0);
     ind = facet(fid).index(vid);
     assert(ind >= 0);
-    
+
     facet(fid).set_flag(FTMESH_FLAG_VISITED);
     count = 1;
-    
+
 #define UMBRELLAWALK(vid, fid, fid_circ)                                    \
           fid_pre = fid;                                                    \
           while(fid_circ >= 0 && fid_circ != (int)fid){                     \
@@ -355,20 +347,20 @@ void TMesh::MarkNonManifoldness()
               fid_circ = facet(fid_circ).facet( (ind_circ + 2) % 3 );       \
             }                                                               \
           }
-   
+
     fid_circ = facet(fid).facet( (ind + 1) % 3 );
-    UMBRELLAWALK(vid, fid, fid_circ);    
+    UMBRELLAWALK(vid, fid, fid_circ);
 
     fid_circ = facet(fid).facet( (ind + 2) % 3 );
     UMBRELLAWALK(vid, fid, fid_circ);
-  
-    //If the incident facets does not form an umbrella, then mark 
+
+    //If the incident facets does not form an umbrella, then mark
     if( count < vert.n_facets() ){
       vert.set_flag(VTMESH_FLAG_NMANIFOLD);
       for(unsigned int i = 0; i < vert.n_facets(); i ++)
         facet( vert.facet(i) ).un_set_flag(FTMESH_FLAG_NMANIFOLD);
     }
-    
+
     //Unset FTMESH_FLAG_VISITED
     for(unsigned int i = 0; i < vert.n_facets(); i ++)
       facet( vert.facet(i) ).un_set_flag(FTMESH_FLAG_VISITED);
@@ -376,7 +368,7 @@ void TMesh::MarkNonManifoldness()
 }
 
 //--------------------------------------------------
-//OrientateFacets: 
+//OrientateFacets:
 //----------------
 //Orientate the facets so that all the manifold facets will have
 //a consistent orientation
@@ -391,12 +383,12 @@ void TMesh::OrientateFacets()
   int ind1, ind2;
   int fid_adj;
 
-  //Find largest part of the surface which can be orientated. 
+  //Find largest part of the surface which can be orientated.
   max_nfacets = 0;
   for(f = 0; f < f_count(); f ++){
     if( facet(f).check_flag(FTMESH_FLAG_NMANIFOLD) ) continue;
     if( facet(f).check_flag(FTMESH_FLAG_VISITED) ) continue;
-    
+
     fid_queue.push(f);
     facet(f).set_flag(FTMESH_FLAG_VISITED);
 
@@ -413,7 +405,7 @@ void TMesh::OrientateFacets()
         facet(fid_adj).set_flag(FTMESH_FLAG_VISITED);
       }
     }
-    
+
     if( nfacets > max_nfacets ){
       max_nfacets = nfacets;
       fid_start = f;
@@ -422,8 +414,8 @@ void TMesh::OrientateFacets()
   //unset flags
   for(f = 0; f < f_count(); f ++)
     facet(f).un_set_flag(FTMESH_FLAG_VISITED);
-  
-  
+
+
   //orientate the facets
   fid_queue.push(fid_start);
   facet(fid_start).set_flag(FTMESH_FLAG_ORIENTATE);
@@ -434,14 +426,14 @@ void TMesh::OrientateFacets()
       if(fid_adj < 0) continue;
       if( facet(fid_adj).check_flag(FTMESH_FLAG_NMANIFOLD) ) continue;
       if( facet(fid_adj).check_flag(FTMESH_FLAG_ORIENTATE) ) continue;
-      
+
       vid1 = facet(fid).vert( (j + 1) % 3 );
       vid2 = facet(fid).vert( (j + 2) % 3 );
       ind1 = facet(fid_adj).index(vid1);
       ind2 = facet(fid_adj).index(vid2);
-      
+
       assert( ind1 >= 0 && ind2 >= 0 );
-      
+
       //If the orientation of "fid" and "fid_adj" are consisitent
       if( (ind2 + 1) % 3 == ind1 ){
         if( facet(fid).check_flag(FTMESH_FLAG_REVERSE) )
@@ -451,7 +443,7 @@ void TMesh::OrientateFacets()
         assert( (ind1 + 1) % 3  == ind2 );
         if( !(facet(fid).check_flag(FTMESH_FLAG_REVERSE)) )
           facet(fid_adj).set_flag(FTMESH_FLAG_REVERSE);
-      } 
+      }
       fid_queue.push(fid_adj);
       facet(fid_adj).set_flag(FTMESH_FLAG_ORIENTATE);
     }//for j
@@ -471,19 +463,19 @@ void TMesh::PrintMeshTopo()
     for(unsigned int fit = 0; fit < vertex(i).n_facets(); fit ++)
       cout<<"\t"<<vertex(i).facet(fit)<<" ";
     cout<<endl;
-      
+
 	}
   cout<<endl;
-  
+
 	cout<<"triangle top"<<endl;
 	for(unsigned int i = 0; i < f_count(); i ++){
 		cout<<"triangle "<<i<<endl;
-    
+
 		cout<<"\t vert: ";
 		for(int j = 0; j < 3; j ++)
 			cout<<"\t"<<facet(i).vert(j)<<" ";
 	  cout<<endl;
-    
+
 		cout<<"\t adj_facet: ";
 		for(int j = 0; j < 3; j ++)
 			cout<<"\t"<<facet(i).facet(j)<<" ";
@@ -504,14 +496,14 @@ bool TMesh::CheckMeshTopo()
 			if(findex < 0){
 				cerr<<"mesh topo check error!"<<endl;
 				cerr<<"fid: "<<i<<" eid: "<<" fid_adj: "<<fid<<endl;
-        
+
         good = false;
 			}
 			//assert(findex >= 0);
 		}
 	}
-	
-	//check vertex topo	
+
+	//check vertex topo
 	for(unsigned int i = 0; i < v_count(); i ++){
 		for(unsigned int j = 0; j < vertex(i).n_facets(); j ++){
 			unsigned int fid = vertex(i).facet(j);
@@ -523,7 +515,7 @@ bool TMesh::CheckMeshTopo()
 
         good = false;
 			}
-      
+
 			//assert(vindex >= 0);
 		}
 
@@ -558,12 +550,12 @@ void TMesh::GetBBox()
     _pmax = VECTOR3();
     return;
   }
-  
+
   for(int i = 0; i < 3; i ++){
     _pmin[i] = (vertex(0).coord())(i);
     _pmax[i] = (vertex(0).coord())(i);
   }
-  
+
   for(unsigned int i = 1; i < v_count(); i ++){
     for(int j = 0; j < 3; j ++){
       if( (vertex(i).coord())(j) < _pmin[j] )
@@ -573,7 +565,7 @@ void TMesh::GetBBox()
     }//for j
   }//for i
 
-    
+
   //cerr<<"BBox: min "<<_pmin[0]<<" "<<_pmin[1]<<" "<<_pmin[2]
   //<<" max "<<_pmax[0]<<" "<<_pmax[1]<<" "<<_pmax[2]<<endl;
 }
@@ -609,10 +601,10 @@ void TMesh::MeshSize(double& maxs, double& mins, double& aves)
 			if(mins > length){
 				mins = length;
 			}
-		}			
+		}
 	}
 	aves /= 3 * f_count();
-	
+
 	cout<<"maxs: "<<maxs<<" mins: "<<mins<<" aves: "<<aves<<endl;
 }
 
@@ -631,14 +623,14 @@ void TMesh::OutMeshOffFile(char *filename)
 	fprintf(fp, "appearance {linewidth 7}\n");
 	fprintf(fp, "{\n");
 	fprintf(fp, "OFF\n");
-	
+
 	fprintf(fp, "%d %d 0\n", v_count(), f_count());
 	for(unsigned int i = 0; i < v_count(); i ++){
 		fprintf(fp, "%f %f %f\n", (vertex(i).coord())(0), (vertex(i).coord())(1), (vertex(i).coord())(2));
 	}
 	for(unsigned int i = 0; i < f_count(); i ++){
 
-    	if(  vertex(facet(i).vert(0)).check_flag(VTMESH_FLAG_SELECTED) 
+    	if(  vertex(facet(i).vert(0)).check_flag(VTMESH_FLAG_SELECTED)
 		  && vertex(facet(i).vert(1)).check_flag(VTMESH_FLAG_SELECTED)
 		  && vertex(facet(i).vert(2)).check_flag(VTMESH_FLAG_SELECTED))
       	fprintf(fp, "3 %d %d %d 0.2 0.2 0.2 1\n", facet(i).vert(0), facet(i).vert(1), facet(i).vert(2));
@@ -646,7 +638,7 @@ void TMesh::OutMeshOffFile(char *filename)
       	fprintf(fp, "3 %d %d %d 1 1 1 1\n", facet(i).vert(0), facet(i).vert(1), facet(i).vert(2));
 	}
 	fprintf(fp, "}\n");
-	
+
 	fclose(fp);
 }
 
@@ -656,7 +648,7 @@ void TMesh::OutMeshOffFile(FILE *fp, double r, double g, double b, double a)
 		std::cout<<"Invalid FILE pointer"<<std::endl;
 		return;
 	}
-  
+
 	fprintf(fp, "{\n");
 	fprintf(fp, "OFF\n");
 	fprintf(fp, "%d %d 0\n", v_count(), f_count());
@@ -666,7 +658,7 @@ void TMesh::OutMeshOffFile(FILE *fp, double r, double g, double b, double a)
 	for(unsigned int i = 0; i < f_count(); i ++){
     if( facet(i).check_flag(FTMESH_FLAG_SELECT) )
       fprintf(fp, "3 %d %d %d 1 0 0 1\n", facet(i).vert(0), facet(i).vert(1), facet(i).vert(2));
-		else 
+		else
       fprintf(fp, "3 %d %d %d %f %f %f %f\n", facet(i).vert(0), facet(i).vert(1), facet(i).vert(2), r, g, b, a);
 	}
 	fprintf(fp, "}\n");
@@ -678,7 +670,7 @@ void TMesh::OutMeshOffFile(FILE *fp, double r, double g, double b, double a)
 		std::cout<<"Invalid FILE pointer"<<std::endl;
 		return;
 	}
-  
+
 	fprintf(fp, "{\n");
 	fprintf(fp, "OFF\n");
 	fprintf(fp, "%d %d 0\n", v_count(), f_count());
@@ -696,5 +688,3 @@ void TMesh::OutMeshOffFile(FILE *fp, double r, double g, double b, double a)
 //================================================================
 //end: off file outpur function
 //================================================================
-
-

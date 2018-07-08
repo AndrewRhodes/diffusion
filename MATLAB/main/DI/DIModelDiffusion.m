@@ -23,7 +23,7 @@ spacing = 0.001; % spacing of embedding grid
 
 
 ShowPlot = 1;
-Model = 'bunny/Bunny';
+Model = 'buddha/Buddha_e1_100000';
 
 BDF = 1;
 tauFraction = 1/2;

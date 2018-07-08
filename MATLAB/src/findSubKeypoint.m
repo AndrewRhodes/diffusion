@@ -10,11 +10,11 @@
 
 function SubKeypoint = findSubKeypoint(Keypoint, ScaleParameter, DoG, PointCloud, Neighbors, NeighborFaces)
 
-IncludeNumLevels = 5; % Must be odd
-Range = floor(IncludeNumLevels/2);
+IncludeNumLevels = 3; % Must be odd
+HalfNumLevels = floor(IncludeNumLevels/2);
 
 if ~isfield(PointCloud, 'Location')
-    error('PointCloudIn must contain the field ''Location''.')
+    error('PointCloud must contain the field ''Location''.')
 end
 
 % if ~isfield(PointCloudIn, 'Normal')
@@ -36,7 +36,7 @@ SubKeypoint.Covariance = zeros(4,4,NumKeypoints);
 
 for i = 1 : NumKeypoints
     
-    if Keypoint.Level(i) > 3
+    if Keypoint.Level(i) > HalfNumLevels
         CurrentVertex = PointCloud.Location(Keypoint.Location(i),:);
         %     CurrentNormal = PointCloudIn.Normal(Keypoint.Location(i),:);
         CurrentScale = Keypoint.Scale(i);
@@ -49,14 +49,15 @@ for i = 1 : NumKeypoints
         D = zeros(m, 1);
         
         c = 0;
-        for j = -Range : Range
+        % Over the querey vertex
+        for j = -HalfNumLevels : HalfNumLevels
             c = c +1;
             
             scale = ScaleParameter(Keypoint.Level(i)+j);
             
-            vertex = CurrentVertex;
+            vertex = CurrentVertex-CurrentVertex;
             
-            x(c,1:4) = [vertex(1), vertex(2), vertex(3), scale];
+            x(c,1:4) = [vertex, scale];
             
             phi(c,1:10) = buildPhi(vertex(1), vertex(2), vertex(3), scale);
             
@@ -66,7 +67,7 @@ for i = 1 : NumKeypoints
         
         
         % Over the 3 levels: below, current, above
-        for j = -Range : Range
+        for j = -HalfNumLevels : HalfNumLevels
             
             scale = ScaleParameter(Keypoint.Level(i)+j);
             
@@ -75,11 +76,11 @@ for i = 1 : NumKeypoints
                 
                 c = c + 1;
                 
-                vertex = PointCloud.Location(CurrentNeighbors(k),:);
+                vertex = PointCloud.Location(CurrentNeighbors(k),:) - CurrentVertex;
                 
                 x(c,1:4) = [vertex, scale];
                 
-                phi(c,1:10) = buildPhi(x(c,1), x(c,2), x(c,3), x(c,4));
+                phi(c,1:10) = buildPhi(vertex(1), vertex(2), vertex(3), scale);
                 
                 D(c,1) = DoG(CurrentNeighbors(k), Keypoint.Level(i)+j);
                 
@@ -95,7 +96,7 @@ for i = 1 : NumKeypoints
         y = V(:,end) ./ V(15,end);
         
         [J, H, c] = buildJHc(y);
-        
+
         if abs(det(H)) > 1e-10
             
             xhattilde = - H \ J;
@@ -119,6 +120,7 @@ for i = 1 : NumKeypoints
             
             warning('Det(H) cannot be found for keypoint %d', i)
             disp(cond(H))
+            disp(det(H))
             
         end
     end
