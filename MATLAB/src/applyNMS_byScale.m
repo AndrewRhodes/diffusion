@@ -6,13 +6,15 @@
 % input[Keypoint]: structure with Location, Level, Scale
 % input[t_scale]: scalar
 % input[t_DoG]: scalar
+% input[t_range]: scalar. the range for rangesearch.
 %
 % output[NMSKeypoint]: Keypoint structure after removing non maxima
 
 
 
 
-function NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod)
+function NMSKeypoint = applyNMS_byScale(PointCloud, DoG, Keypoint, t_scale, t_DoG, t_range)
+
 
 NumKeypoints = length(Keypoint.Location);
 
@@ -21,7 +23,7 @@ KeypointTree = KDTreeSearcher(PointCloud.Location(Keypoint.Location,:), 'Distanc
 Ind = sub2ind(size(DoG), Keypoint.Location, Keypoint.Level);
 KpDoG = DoG(Ind);
 
-[KpDoGSort, KpDoGInd] = sort(abs(KpDoG),'descend');
+[KpScaleSort, KpDoGInd] = sort(Keypoint.Scale, 'ascend');
 
 RemoveInd = [];
 RemoveIndAll = [];
@@ -31,19 +33,18 @@ Discontinue = 0;
 
 WaitBar = waitbar(0, sprintf('Checking Keypoint %i of %i', 0, NumKeypoints));
 
-
 for i = 1 : NumKeypoints
-
+    
     CurrentPoint = PointCloud.Location(Keypoint.Location(KpDoGInd(i)),:);
-    CurrentScale = Keypoint.Scale(KpDoGInd(i));
-    CurrentDoG = KpDoGSort(i);
+    CurrentScale = KpScaleSort(i);
+    CurrentDoG = KpDoG(KpDoGInd(i));
     CurrentInd = KpDoGInd(i);
+    
     srange = t_range * PointCloud.ResolutionLocal(Keypoint.Location(KpDoGInd(i)));
     
     if KpIndRemain(KpDoGInd(i))
         
         [Neigh, Dist] = rangesearch(KeypointTree, CurrentPoint, srange);
-        
         Neigh = Neigh{:};
         Dist = Dist{:};
         
@@ -61,47 +62,30 @@ for i = 1 : NumKeypoints
                     % if the scales of the two keypoints are similar
                     if ( min(CurrentScale, NextScale) / max(CurrentScale,NextScale) ) > t_scale
                         
-                        % Marr-Hildreth 3D Edge Detection
-                        if strcmpi(DoGNormalize, 'AbsDoG') && strcmpi(CompareMethod, '<')
-                            if abs(NextDoG) > abs(CurrentDoG)
-                                
-                                RemoveInd = [RemoveInd, Neigh(j)];
-                                
-                            elseif abs(NextDoG) <= abs(CurrentDoG)
-                                
-                                RemoveInd = [RemoveInd, KpDoGInd(i)];
-                                Discontinue = 1;
-                                
-                            else
-                                warning('NMS needs another criterion.')
-                            end
+                        if abs(NextDoG) > abs(CurrentDoG)
                             
-                        % DoG local extrema
-                        elseif strcmpi(DoGNormalize, 'DoG') && strcmpi(CompareMethod, '<>')
+                            RemoveInd = [RemoveInd, Neigh(j)];
                             
-                            if abs(NextDoG) > abs(CurrentDoG)
-                                
-                                RemoveInd = [RemoveInd, KpDoGInd(i)];
-                                Discontinue = 1;
-                                
-                            elseif abs(NextDoG) <= abs(CurrentDoG)
-                                
-                                RemoveInd = [RemoveInd, Neigh(j)];
-                                
-                                
-                            else
-                                warning('NMS needs another criterion.')
-                            end
+                        elseif abs(NextDoG) <= abs(CurrentDoG)
                             
+                            RemoveInd = [RemoveInd, KpDoGInd(i)];
+                            Discontinue = 1;
+                            
+                        else
+                            warning('NMS needs another criterion.')
                         end
+                        
+                        
                     end
+                    
+                    
                 end
                 
                 if Discontinue
                     Discontinue = 0;
                     break;
-                end          
-                    
+                end
+                
             end
             
             if ~isempty(RemoveInd)
@@ -110,9 +94,10 @@ for i = 1 : NumKeypoints
                 RemoveIndAll = [RemoveIndAll, RemoveInd];
                 RemoveInd = [];
             end
-            
-        end
-    end                   
+        end 
+    end
+    
+    
     
     waitbar(i/NumKeypoints, WaitBar, sprintf('Checking Keypoint %i of %i', i, NumKeypoints));
     
@@ -128,9 +113,28 @@ NMSKeypoint.Location(RemoveIndAll) = [];
 NMSKeypoint.Scale(RemoveIndAll) = [];
 NMSKeypoint.Level(RemoveIndAll) = [];
 % NMSKeypoint.LocationCell(RemoveIndAll) = [];
- 
+
+
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

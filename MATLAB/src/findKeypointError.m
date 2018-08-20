@@ -1,7 +1,7 @@
 
 
 
-function [Error, Match, NoMatch, MultipleMatch] = findKeypointError(PointCloud, FileLocation, NumIter, UseNMS, Use4D)
+function [Error, Match, NoMatch, MultipleMatch] = findKeypointError(PointCloud, FileLocation, NumIter, UseNMS, Use4D, t_scale, level_min)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -9,7 +9,7 @@ function [Error, Match, NoMatch, MultipleMatch] = findKeypointError(PointCloud, 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % UseNMS = 0;
-t_scale = 0.9;
+% t_scale = 0.9;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -26,6 +26,13 @@ else
     FileName = strcat('Keypoint','.mat');
     load(fullfile(FileLocation, FileName),'Keypoint')
     KeypointOriginal = Keypoint;
+end
+
+if level_min
+    ScaleLogic = KeypointOriginal.Level < level_min;
+    KeypointOriginal.Scale(ScaleLogic) = [];
+    KeypointOriginal.Location(ScaleLogic) = [];
+    KeypointOriginal.Level(ScaleLogic) = [];
 end
 
 NumKeypointOriginal = length(KeypointOriginal.Scale);
@@ -62,6 +69,14 @@ for i = 1 : NumIter
         load(fullfile(FileLocation, FileName),'Keypoint')
     end
     
+    if level_min
+        ScaleLogic = Keypoint.Level < level_min;
+        Keypoint.Scale(ScaleLogic) = [];
+        Keypoint.Location(ScaleLogic) = [];
+        Keypoint.Level(ScaleLogic) = [];
+    end
+        
+    
     NumKeypoints = length(Keypoint.Location);
     c = 0;
     for j = 1 : NumKeypoints
@@ -71,7 +86,7 @@ for i = 1 : NumIter
         
         if Use4D
 %             [Neigh, Dist] = rangesearch(KeypointTree, [CurrentPoint,CurrentScale], PointCloud.Resolution);
-            [Neigh, Dist] = rangesearch(KeypointTree, [CurrentPoint,CurrentScale], 2*CurrentScale);
+            [Neigh, Dist] = rangesearch(KeypointTree, [CurrentPoint,CurrentScale], CurrentScale);
 %             [Idx, Dist] = knnsearch(KeypointTree, [CurrentPoint,CurrentScale], 'K', 1, 'IncludeTies', true, 'Distance', 'euclidean');
         else
 %             [Neigh, Dist] = rangesearch(KeypointTree, CurrentPoint, PointCloud.Resolution);
@@ -90,10 +105,12 @@ for i = 1 : NumIter
             continue;
         elseif length(Dist) == 1
             OnlyOne = 1;
-            ScaleLogic = (min(KeypointOriginal.Scale(Neigh), CurrentScale) ./ max(KeypointOriginal.Scale(Neigh), CurrentScale)) >= t_scale;            
+            ScaleRatio = (min(KeypointOriginal.Scale(Neigh), CurrentScale) ./ max(KeypointOriginal.Scale(Neigh), CurrentScale));
+            ScaleLogic = ScaleRatio >= t_scale;            
         elseif length(Dist) >= 1
             MoreThanOne = 1;
-            ScaleLogic = (min(KeypointOriginal.Scale(Neigh), CurrentScale) ./ max(KeypointOriginal.Scale(Neigh), CurrentScale)) >= t_scale;            
+            ScaleRatio = (min(KeypointOriginal.Scale(Neigh), CurrentScale) ./ max(KeypointOriginal.Scale(Neigh), CurrentScale));
+            ScaleLogic = ScaleRatio >= t_scale;            
         else
             warning('Didn''t think of something')
         end
@@ -103,7 +120,12 @@ for i = 1 : NumIter
         
         if MoreThanOne && nnz(ScaleLogic) > 1
 %             warning('Too many matches on Iter %d, Keypoint %d.', i, j)
+%             c = c + 1;
             MultipleMatch(i,1) = MultipleMatch(i,1) + 1;
+%             [maxval, maxind] = max(ScaleRatio);
+%             Error.Scale{i}(c,1) = findSphereRepeat(PointCloud.Location(KeypointOriginal.Location(Neigh(maxind)),:), KeypointOriginal.Scale(Neigh(maxind)), CurrentPoint, CurrentScale);
+%             Error.Distance{i}(c,1) = Dist(maxind);
+%             Error.Count(i,1) = Error.Count(i,1) + 1;
         elseif MoreThanOne && nnz(ScaleLogic) == 0
 %             warning('No Match on Iter %d, Keypoint %d.', i, j )
             NoMatch(i,1) = NoMatch(i,1) + 1;

@@ -11,7 +11,7 @@
 
 
 
-function [Neighbors, NeighborFaces] = findAdjacentNeighbors(PointCloudIn)
+function [Neighbors, NeighborFaces, PointCloudIn] = findAdjacentNeighbors(PointCloudIn)
 
 if ~isfield(PointCloudIn, 'Location')
     erorr('PointCloudIn must contain field ''Location''')
@@ -52,6 +52,10 @@ Neighbors.Connect = cellfun(@unique, Neighbors.Connect, 'UniformOutput', 0);
 NeighborFaces.Connect = cellfun(@unique, NeighborFaces.Connect, 'UniformOutput', 0);
 
 
+% Calculate local resolution of point cloud. And pass back out
+PointCloudIn = findLocalResolution(PointCloudIn, Neighbors.Connect);
+
+
 KDTree = KDTreeSearcher(PointCloudIn.Location, 'Distance', 'euclidean');
 
 NeighborFaces.Distance = cell(PointCloudIn.LocationCount,1);
@@ -60,7 +64,7 @@ Neighbors.Distance = cell(PointCloudIn.LocationCount,1);
 
 for i = 1 : PointCloudIn.LocationCount
     
-    [Neigh, ~] = rangesearch(KDTree, PointCloudIn.Location(i,:), sqrt(2)*PointCloudIn.Resolution);
+    [Neigh, ~] = rangesearch(KDTree, PointCloudIn.Location(i,:), sqrt(3)*PointCloudIn.ResolutionLocal(i,1));
     
     Neigh{1}(1) = [];
     

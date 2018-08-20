@@ -17,7 +17,7 @@
 
 
 
-function Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors, Method, CompareMethod)
+function [Keypoint, DoGMaximum] = findKeypointDoGMax(DoG, ScaleParameter, PointCloud, Neighbors, Method, CompareMethod)
 
 %
 % if nargin < 4
@@ -49,10 +49,19 @@ if strcmpi(Method, 'Old')
     Keypoint.Scale = zeros(MaxNumberFeatures,1);
     Keypoint.Location = zeros(MaxNumberFeatures,1);
     Keypoint.Level = zeros(MaxNumberFeatures,1);
+    Keypoint.LocationCell = cell(NumDoGLevels,1);
+    
+    DoGMaximum.Scale = zeros(MaxNumberFeatures*100,1);
+    DoGMaximum.Location = zeros(MaxNumberFeatures*100,1);
+    DoGMaximum.Level = zeros(MaxNumberFeatures*100,1);
+    DoGMaximum.LocationCell = cell(NumDoGLevels,1);
+    
     
     NumFeatures = 0;
+    NumDoGMax  = 0;
     
     isFeaturePoint = 0;
+    isDoGMax = 0;
     
     WaitBar = waitbar(0, sprintf('Checking Vertex %i of %i', 0, NumVertices));
     
@@ -71,7 +80,7 @@ if strcmpi(Method, 'Old')
         for j = 2 : NumDoGLevels - 2
             
             CurrentValue = DoG(i,j);
-            
+
             SurroundingValuesBelow = DoG([i,CurrentNeighbors],j-1);
             SurroundingValuesCurrent = DoG(CurrentNeighbors,j);
             SurroundingValuesAbove = DoG([i,CurrentNeighbors],j+1);
@@ -79,6 +88,7 @@ if strcmpi(Method, 'Old')
             if strcmpi(CompareMethod, '>')
                 
                 if all(CurrentValue > SurroundingValuesCurrent)
+                    isDoGMax = 1;
                     if all(CurrentValue > SurroundingValuesBelow)
                         if all(CurrentValue > SurroundingValuesAbove)
                             isFeaturePoint = 1;
@@ -89,12 +99,14 @@ if strcmpi(Method, 'Old')
             elseif strcmpi(CompareMethod, '<>') || strcmpi(CompareMethod, '><')
                 
                 if all(CurrentValue > SurroundingValuesCurrent)
+                    isDoGMax = 1;
                     if all(CurrentValue > SurroundingValuesBelow)
                         if all(CurrentValue > SurroundingValuesAbove)
                             isFeaturePoint = 1;
                         end
                     end
                 elseif all(CurrentValue < SurroundingValuesCurrent)
+                    isDoGMax = 1;
                     if all(CurrentValue < SurroundingValuesBelow)
                         if all(CurrentValue < SurroundingValuesAbove)
                             isFeaturePoint = 1;
@@ -105,6 +117,7 @@ if strcmpi(Method, 'Old')
             elseif strcmpi(CompareMethod, '<')
 
                 if all(CurrentValue < SurroundingValuesCurrent)
+                    isDoGMax = 1;
                     if all(CurrentValue < SurroundingValuesBelow)
                         if all(CurrentValue < SurroundingValuesAbove)
                             isFeaturePoint = 1;
@@ -116,13 +129,23 @@ if strcmpi(Method, 'Old')
                 error('findKeypoint:: incorrecte input for CompareMethod')
             end
             
-            
+
             if isFeaturePoint
                 NumFeatures = NumFeatures + 1;
                 Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
                 Keypoint.Location(NumFeatures, 1) = i;
                 Keypoint.Level(NumFeatures, 1) = j;
+                Keypoint.LocationCell{j,1} = [Keypoint.LocationCell{j,1}; i];
                 isFeaturePoint = 0;
+            end
+            
+            if isDoGMax
+                NumDoGMax = NumDoGMax + 1;
+                DoGMaximum.Scale(NumDoGMax, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
+                DoGMaximum.Location(NumDoGMax, 1) = i;
+                DoGMaximum.Level(NumDoGMax, 1) = j;
+                DoGMaximum.LocationCell{j,1} = [DoGMaximum.LocationCell{j,1}; i];
+                isDoGMax = 0;
             end
             
             
@@ -141,6 +164,12 @@ if strcmpi(Method, 'Old')
     Keypoint.Scale(ZeroLogic,:) = [];
     Keypoint.Location(ZeroLogic,:) = [];
     Keypoint.Level(ZeroLogic,:) = [];
+    
+    ZeroLogic = (DoGMaximum.Location == 0);
+    DoGMaximum.Scale(ZeroLogic,:) = [];
+    DoGMaximum.Location(ZeroLogic,:) = [];
+    DoGMaximum.Level(ZeroLogic,:) = [];
+    
     
 elseif strcmpi(Method, 'New')
     % % % Pre-computation checks and setup
