@@ -5,6 +5,7 @@
 
 close all
 clear
+
 clc
 
 global ProjectRoot; % Additional Paths
@@ -25,21 +26,20 @@ Model = 'bunny/Bunny_e1';
 
 BDF = 2;
 tauFraction = 1/10;
-NumIter = 1;
-tauNumerator = 3000;
+tauNumerator = 250;
 DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
 
 
 
-
+NumIter = 50;
 
 t_scale = 0.7;
 t_DoG = 0.9;
 t_range = 3;
 
-NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
+NoiseVec = [0.5];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -57,6 +57,7 @@ FileNameModelOff = strcat(Model,'.off');
 
 [PointCloud.Location, PointCloud.Face] = read_ply( fullfile( FileLocationModel, FileNameModelPly ) );
 
+% PointCloud.Location = PointCloud.Location.*681.65;
 
 PointCloud.LocationCount = size(PointCloud.Location,1);
 PointCloud.FaceCount = size(PointCloud.Face, 1);
@@ -78,12 +79,10 @@ NumSteps = round(MaxTau);
 load('BunnyCurvature_e1.mat')
 MK = Curvature;
 
-%[Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
-%save Bunny_e1_Neighbors Neighbors
-
 load('Bunny_e1_Neighbors.mat')
 PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
 
+%[Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
 
 % [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
 clear PK1 PK2 PD1 PD2 PK2 GK NeighborFaces NormalRotations
@@ -94,10 +93,7 @@ stdMK = std(MK);
 
 %ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
 
-%save BunnyItL_e1 ItL
-
 load('BunnyItL_e1.mat')
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Scale Parameters
@@ -113,7 +109,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
 
-    for i = 1 : NumIter
+    for i = 27:50
         i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
@@ -138,7 +134,7 @@ for j = 1 : length(NoiseVec)
         %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/LongRun/Std_',num2str(NoiseVec(j)));
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/Std_',num2str(NoiseVec(j)));
        FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
 %       FileName = strcat('Keypoint','.mat');
         
@@ -151,44 +147,6 @@ for j = 1 : length(NoiseVec)
         
     end
 end
-
-
-
-for i = 1
-    
-    PointCloud.Signal = MK;
-    
-    
-    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
-    
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Find Difference of Gaussian
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
-    
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Detect Extrema
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-    
-    %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
-    
-    for j = 1 : length(NoiseVec)
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/LongRun/Std_',num2str(NoiseVec(j)));
-        FileName = strcat('Keypoint','.mat');
-
-        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
-
-        FileName = strcat('NMSKeypoint','.mat');
-        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-    end
-end
-
 
 
 

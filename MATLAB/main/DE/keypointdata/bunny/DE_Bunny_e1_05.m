@@ -21,20 +21,25 @@ options.rho = 4;
 options.dtype = 'geodesic';
 % options.dtype = 'euclidean';
 
-ShowPlot = 1;
+ShowPlot = 0;
 Model = 'bunny/Bunny_e1';
 
-BDF = 4;
+BDF = 2;
 tauFraction = 1/10;
-DoGNormalize = 1;
 tauNumerator = 250;
+DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
+CompareMethod = '<>'; % '<', '>', '<>'
+KeypointMethod = 'Old'; % 'Old', 'New'
+
+
 
 NumIter = 50;
 
 t_scale = 0.7;
 t_DoG = 0.9;
+t_range = 3;
 
-NoiseVec = [0.3, 0.4, 0.5];
+NoiseVec = [0.5];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -52,13 +57,13 @@ FileNameModelOff = strcat(Model,'.off');
 
 [PointCloud.Location, PointCloud.Face] = read_ply( fullfile( FileLocationModel, FileNameModelPly ) );
 
-% PointCloud.Location = PointCloud.Location.*681.65;
+
 
 PointCloud.LocationCount = size(PointCloud.Location,1);
 PointCloud.FaceCount = size(PointCloud.Face, 1);
 PointCloud.FaceArea = findFaceArea(PointCloud.Location,PointCloud.Face);
 PointCloud = findMeshResolution(PointCloud, 'Model');
-PointCloud = findMeshNormals(PointCloud);
+PointCloud = findMeshNormals(PointCloud)
 NormalRotations = findNormalsRotation(PointCloud.Normal);
 
 % ply_write('Bunny_e1', PointCloud.Face, PointCloud.Location)
@@ -71,18 +76,23 @@ MaxTau = tauNumerator / PointCloud.Resolution;
 NumSteps = round(MaxTau);
 % % % % % % % % % %
 
+load('BunnyCurvature_e1.mat')
+MK = Curvature;
 
-[Neighbors, NeighborFaces] = findAdjacentNeighbors(PointCloud);
+load('Bunny_e1_Neighbors.mat')
+PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
 
-[PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
+%[Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
+
+% [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
 clear PK1 PK2 PD1 PD2 PK2 GK NeighborFaces NormalRotations
 stdMK = std(MK);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup Laplace-Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
-
+%ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
+load('BunnyItL_e1.mat')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Scale Parameters
@@ -97,14 +107,9 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 % Diffusion of Mean Curvature
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
-     if NoiseVec(j) == 0.3
-        Iterand = [NumIter/2+1:NumIter];
-    else
-        Iterand = [1:NumIter];
-    end
-        for i = Iterand
-                
-        
+
+    for i = 6:50
+        i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
         
@@ -122,26 +127,28 @@ for j = 1 : length(NoiseVec)
         % Detect Extrema
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        Keypoint = findKeypoint(DoG, ScaleParameter, Neighbors.Distance, 'Old');
-
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_DoG);
+        Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
         
         %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/Std_',num2str(NoiseVec(j)),'_new/');
-        FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
-        %     FileName = strcat('Keypoint','.mat');
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/Std_',num2str(NoiseVec(j)));
+       FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
+%       FileName = strcat('Keypoint','.mat');
         
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
         
-        FileName = strcat('NMSKeypoint','_Iter',num2str(i),'.mat');
-        %     FileName = strcat('NMSKeypoint','.mat');
-        
+       FileName = strcat('NMSKeypoint','_Iter',num2str(i),'.mat');
+%        FileName = strcat('NMSKeypoint','.mat');
+       
         save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
         
     end
 end
+
+
+
 
 
 
