@@ -20,20 +20,25 @@ options.rho = 4;
 options.dtype = 'geodesic';
 % options.dtype = 'euclidean';
 
-ShowPlot = 1;
+ShowPlot = 0;
 Model = 'buddha/Buddha_e1_50000';
 
-BDF = 4;
+BDF = 2;
 tauFraction = 1/10;
-DoGNormalize = 1;
-tauNumerator = 250;
+NumIter = 1;
+tauNumerator = 3000;
+DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
+CompareMethod = '<>'; % '<', '>', '<>'
+KeypointMethod = 'Old'; % 'Old', 'New'
 
-NumIter = 50;
+
+
 
 NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
 
 t_scale = 0.7;
 t_DoG = 0.9;
+t_range = 3;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -57,7 +62,7 @@ PointCloud.LocationCount = size(PointCloud.Location,1);
 PointCloud.FaceCount = size(PointCloud.Face, 1);
 PointCloud.FaceArea = findFaceArea(PointCloud.Location,PointCloud.Face);
 PointCloud = findMeshResolution(PointCloud, 'Model');
-PointCloud = findMeshNormals(PointCloud);
+PointCloud = findMeshNormals(PointCloud)
 NormalRotations = findNormalsRotation(PointCloud.Normal);
 
 %
@@ -72,19 +77,28 @@ NumSteps = round(MaxTau);
 NumSteps = tauNumerator;
 % % % % % % % % % %
 
+load('BuddhaCurvature_e1_50000.mat')
+MK = Curvature;
 
-[Neighbors, NeighborFaces] = findAdjacentNeighbors(PointCloud);
+% [Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
+% save Buddha_e1_50000_Neighbors Neighbors
+load('Buddha_e1_50000_Neighbors.mat','Neighbors')
+PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
 
-[PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
-clear PK1 PK2 PD1 PD2 GK NeighborFaces NormalRotations
+
+% [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
+% clear PK1 PK2 PD1 PD2 GK NeighborFaces NormalRotations
 stdMK = std(MK);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Setup Laplace-Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
 
+%ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
+
+%save BuddhaItL_e1_50000 ItL
+load('BuddhaItL_e1_50000.mat')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Scale Parameters
@@ -100,7 +114,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
     
-    for i = 1 : NumIter
+   for i = 1 : NumIter
         i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
@@ -119,30 +133,63 @@ for j = 1 : length(NoiseVec)
         % Detect Extrema
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
+        Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
         
-        Keypoint = findKeypoint(DoG, ScaleParameter, Neighbors.Distance, 'Old');
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_DoG);
-        
+
         % SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/buddha/Std_',num2str(NoiseVec(j)),'/');
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/buddha/LongRun/Std_',num2str(NoiseVec(j)),'/');
         FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
-        %     FileName = strcat('Keypoint','.mat');
+%              FileName = strcat('Keypoint','.mat');
         
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
         
         
         FileName = strcat('NMSKeypoint','_Iter',num2str(i),'.mat');
-        %     FileName = strcat('NMSKeypoint','.mat');
+%              FileName = strcat('NMSKeypoint','.mat');
         
         save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
         
         
-    end
+   end
     
 end
 
+
+
+for i = 1
+    
+    PointCloud.Signal = MK;
+    
+    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Find Difference of Gaussian
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Detect Extrema
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
+    
+    %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
+    
+    for j = 1 : length(NoiseVec)
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/buddha/LongRun/Std_',num2str(NoiseVec(j)));
+        FileName = strcat('Keypoint','.mat');
+
+        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
+
+        FileName = strcat('NMSKeypoint','.mat');
+        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
+    end
+end
 
 
 
