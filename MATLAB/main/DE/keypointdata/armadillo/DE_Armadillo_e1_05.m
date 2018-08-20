@@ -25,8 +25,8 @@ Model = 'armadillo/Armadillo_e1_100000';
 
 BDF = 2;
 tauFraction = 1/10;
-NumIter = 1;
-tauNumerator = 3000;
+NumIter = 50;
+tauNumerator = 250;
 DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
@@ -35,7 +35,7 @@ t_scale = 0.7;
 t_DoG = 0.9;
 t_range = 3;
 
-NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
+NoiseVec = [0.5];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -77,12 +77,9 @@ load('ArmadilloCurvature_e1_100000.mat')
 MK = Curvature;
 
 
-% load('Neighbors.mat')
-% [Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
-% save Armadillo_e1_100000_Neighbors Neighbors
-
 load('Armadillo_e1_100000_Neighbors.mat')
 PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
+% [Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
 
 % [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
 % clear PK1 PK2 PD1 PD2 GK NeighborFaces
@@ -108,7 +105,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 % Diffusion of Mean Curvature
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
-    for i = 1 : NumIter
+    for i = 4 : 25
         i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
@@ -128,18 +125,16 @@ for j = 1 : length(NoiseVec)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
 %         [Keypoint, DoGMaximum] = findKeypointDoGMax(DoG, ScaleParameter, PointCloud, Neighbors.Connect, KeypointMethod, CompareMethod);
-        Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+        Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Connect, KeypointMethod, CompareMethod);
         
         NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-        
 %         NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_DoG);
 %         NMSKeypoint = applyNMSNew(PointCloud, DoG, Keypoint, t_scale, t_DoG, t_range);
-%         NMSKeypoint2 = applyNMS_byScale(PointCloud, DoG, Keypoint, t_scale, t_DoG, t_range);
         
         % SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/LongRun/Std_',num2str(NoiseVec(j)),'/');
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/Std_',num2str(NoiseVec(j)),'/');
         FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');        
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
         
@@ -154,39 +149,5 @@ end
 
 
 
-
-for i = 1
-    
-    PointCloud.Signal = MK;
-    
-    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Find Difference of Gaussian
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Detect Extrema
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Connect, KeypointMethod, CompareMethod);
-    
-    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-%     NMSKeypoint = applyNMSNew(PointCloud, DoG, Keypoint, t_scale, t_DoG, t_range);
-    
-    %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
-    
-    for j = 1 : length(NoiseVec)
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/LongRun/Std_',num2str(NoiseVec(j)));
-        FileName = strcat('Keypoint','.mat');
-
-        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
-
-        FileName = strcat('NMSKeypoint','.mat');
-        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-    end
-end
 
     

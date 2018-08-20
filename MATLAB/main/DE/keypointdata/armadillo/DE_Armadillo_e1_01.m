@@ -25,8 +25,8 @@ Model = 'armadillo/Armadillo_e1_100000';
 
 BDF = 2;
 tauFraction = 1/10;
-NumIter = 1;
-tauNumerator = 3000;
+NumIter = 10;
+tauNumerator = 250;
 DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
@@ -35,7 +35,7 @@ t_scale = 0.7;
 t_DoG = 0.9;
 t_range = 3;
 
-NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
+NoiseVec = [0.1];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -77,12 +77,10 @@ load('ArmadilloCurvature_e1_100000.mat')
 MK = Curvature;
 
 
-% load('Neighbors.mat')
-% [Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
-% save Armadillo_e1_100000_Neighbors Neighbors
-
 load('Armadillo_e1_100000_Neighbors.mat')
 PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
+% [Neighbors, NeighborFaces, PointCloud] = findAdjacentNeighbors(PointCloud);
+
 
 % [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
 % clear PK1 PK2 PD1 PD2 GK NeighborFaces
@@ -139,7 +137,7 @@ for j = 1 : length(NoiseVec)
         % SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/LongRun/Std_',num2str(NoiseVec(j)),'/');
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/Std_',num2str(NoiseVec(j)),'/');
         FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');        
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
         
@@ -179,7 +177,7 @@ for i = 1
     %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
     
     for j = 1 : length(NoiseVec)
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/LongRun/Std_',num2str(NoiseVec(j)));
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/armadillo/Std_',num2str(NoiseVec(j)));
         FileName = strcat('Keypoint','.mat');
 
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
