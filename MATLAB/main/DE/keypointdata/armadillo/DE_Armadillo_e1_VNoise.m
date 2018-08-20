@@ -112,7 +112,7 @@ for j = 1 : length(NoiseVec)
     % Diffusion of Mean Curvature
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    load('ArmadilloItL_e1_100000.mat')
+    ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
     
     PointCloud.Signal = MK;
     
