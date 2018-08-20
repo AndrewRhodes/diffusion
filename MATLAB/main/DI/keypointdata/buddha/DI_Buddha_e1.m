@@ -48,7 +48,6 @@ FileNameModelPly = strcat(Model,'.ply');
 FileNameModelOff = strcat(Model,'.off');
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,10 +72,10 @@ NumSteps = round(MaxTau);
 
 [Neighbors, NeighborFaces] = findAdjacentNeighbors(PointCloud);
 
-[PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
+% [PK1, PK2, PD1, PD2, MK, GK] = findPointCurvatures(PointCloud, NormalRotations, Neighbors.Connect);
 
 PointCloud.Signal = MK;
-clear PK1 PK2 PD1 PD2 GK NeighborFaces
+% clear PK1 PK2 PD1 PD2 GK NeighborFaces
 stdMK = std(MK);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

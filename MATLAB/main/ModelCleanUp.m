@@ -17,9 +17,9 @@ addpath(genpath('~/GitProjects/pose/MLIDAR-2.2/'))
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear PointCloud
-DirectoryName = 'dragon';
-ModelName = 'Dragon_e1';
-DownSampleFacesNum = 50000;
+DirectoryName = 'itokawa';
+ModelName = 'Itokawa_e1';
+DownSampleFacesNum = 100000;
 
 FileLocationModel = strcat(ProjectRoot,'/models/object/');
 FileNameModelPly = strcat(DirectoryName,'/',ModelName,'.ply');
@@ -54,11 +54,6 @@ PointCloud
 
 ply_write(strcat(ModelName,'_',num2str(DownSampleFacesNum),'.ply'), PointCloud.Face, PointCloud.Location)
 save_off(PointCloud.Location, PointCloud.Face, strcat(ModelName,'_',num2str(DownSampleFacesNum),'.off'))
-
-
-
-
-
 
 
 % sunvector = [-.5;-.5;1];
