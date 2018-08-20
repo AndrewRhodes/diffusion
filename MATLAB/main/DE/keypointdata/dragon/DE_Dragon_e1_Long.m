@@ -36,7 +36,7 @@ t_scale = 0.7;
 t_DoG = 0.9;
 t_range = 3;
 
-NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
+NoiseVec = [0.5];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -71,8 +71,7 @@ NormalRotations = findNormalsRotation(PointCloud.Normal);
 tau = PointCloud.Resolution * tauFraction;
 MaxTau = tauNumerator / PointCloud.Resolution;
 NumSteps = round(MaxTau);
-NumSteps = tauNumerator
-MaxTau = tauNumerator;
+NumSteps = tauNumerator;
 % % % % % % % % % %
 
 load('DragonCurvature_e1_50000.mat')
@@ -109,7 +108,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 % Diffusion of Mean Curvature
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
-   for i = 1 : NumIter
+   for i = 20:50
        i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
