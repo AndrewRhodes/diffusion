@@ -27,7 +27,7 @@ if level_min
     KeypointOriginal.Level(ScaleLogic) = [];
 end
 
-NumKeypointOriginal = length(KeypointOriginal.Scale);
+NumKeypointOriginal = length(KeypointOriginal.Scale)
 
 
 KeypointTree = KDTreeSearcher(PointCloud.Location(KeypointOriginal.Location,:), 'Distance', 'euclidean');
@@ -68,6 +68,7 @@ for i = 1 : NumIter
     
     NumKeypointsIter = length(KeypointIter.Location);
     c = 0;
+    Matched = zeros(NumKeypointOriginal,1);
     
     for j = 1 : NumKeypointsIter
         
@@ -82,8 +83,22 @@ for i = 1 : NumIter
         
         Neigh = Neigh{:};
         Dist = Dist{:};       
-
-
+    
+        % Remove from consideration the original keypoints that have
+        % already been matched.
+        Remove = [];
+        for k = 1 : length(Neigh)
+            if Matched(Neigh)
+                Remove = [Remove; k];
+            end
+        end
+        if ~isempty(Neigh)
+            Neigh(Remove) = [];
+            Dist(Remove) = [];
+        end
+                
+        
+        
         if isempty(Neigh)
             
             NoMatch(i,1) = NoMatch(i,1) + 1;
@@ -99,6 +114,7 @@ for i = 1 : NumIter
                 Error.Distance{i}(c,1) = Dist;
                 Error.Count(i,1) = Error.Count(i,1) + 1;
 %                 Match(i,1) = Match(i,1) + 1;
+                Matched(Neigh) = 1;
             else
                 NoMatch(i,1) = NoMatch(i,1) + 1;
             end
@@ -117,11 +133,14 @@ for i = 1 : NumIter
                 Error.Distance{i}(c,1) = Dist(MaxLoc);
                 Error.Count(i,1) = Error.Count(i,1) + 1;
 %                 Match(i,1) = Match(i,1) + 1;
+                Matched(Neigh(MaxLoc)) = 1;
             end
             
         end
         
-            
+    if nnz(Matched) == NumKeypointOriginal
+        error('Ended Early')
+    end
             
   
     end

@@ -34,7 +34,7 @@ KeypointMethod = 'Old'; % 'Old', 'New'
 
 
 
-NoiseVec = [0.5];
+NoiseVec = [0.4];
 
 t_scale = 0.7;
 t_DoG = 0.9;
@@ -94,7 +94,6 @@ stdMK = std(MK);
 %save ItokawaItL_e1_80000 ItL
 load('ItokawaItL_e1_80000.mat')
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Scale Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -109,7 +108,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
     
-   for i = 32:39
+   for i = 23:50
         i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
@@ -153,38 +152,6 @@ for j = 1 : length(NoiseVec)
 end
 
 
-
-%for i = 1
-    
-%    PointCloud.Signal = MK;
-    
-%    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Find Difference of Gaussian
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-%    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Detect Extrema
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-%    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-%        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-    
-    %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
-    
-%    for j = 1 : length(NoiseVec)
-%        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/SignalNoise/ShortRun/itokawa/Std_',num2str(NoiseVec(j)));
-%        FileName = strcat('Keypoint','.mat');
-
-%        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
-
-%        FileName = strcat('NMSKeypoint','.mat');
-%        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-%    end
-%end
 
 
 

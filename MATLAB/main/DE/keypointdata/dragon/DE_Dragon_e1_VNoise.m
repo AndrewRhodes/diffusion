@@ -85,7 +85,7 @@ for j = 1 : length(NoiseVec)
     
     ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
     
-    save(strcat('DragonItL_e1_50000_sigma',num2str(j),'.mat'),'ItL','v7.3')
+    save(strcat('DragonItL_e1_50000_sigma',num2str(j),'.mat'),'ItL','-v7.3')
     
     % load(strcat('DragonItL_e1_50000_sigma',num2str(j),'.mat'))
     
@@ -125,7 +125,7 @@ for j = 1 : length(NoiseVec)
     NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
     
     
-    FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/dragon/Std_',num2str(NoiseVec(j)),'/');
+    FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/dragon/VertexNoise/LongRun/Std_',num2str(NoiseVec(j)),'/');
     FileName = strcat('Keypoint','_Iter1.mat');
     %              FileName = strcat('Keypoint','.mat');
     
@@ -189,7 +189,7 @@ for i = 1
     % Setup Laplace-Beltrami
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ItL = makeExplicitLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
+    load('DragonItL_e1_50000.mat') 
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Scale Parameters
@@ -221,7 +221,7 @@ for i = 1
     %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
     
     for j = 1 : length(NoiseVec)
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/dragon/Std_',num2str(NoiseVec(j)));
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/dragon/VertexNoise/LongRun/Std_',num2str(NoiseVec(j)));
         FileName = strcat('Keypoint','.mat');
         
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')

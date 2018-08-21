@@ -34,7 +34,7 @@ KeypointMethod = 'Old'; % 'Old', 'New'
 
 
 
-NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
+NoiseVec = [0.5];
 
 t_scale = 0.7;
 t_DoG = 0.9;
@@ -108,7 +108,7 @@ ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j = 1 : length(NoiseVec)
     
-   for i = 1 : NumIter
+   for i = 40:50
         i
         PointCloud.Signal = MK + NoiseVec(j)*stdMK*rand(PointCloud.LocationCount,1);
         
@@ -134,7 +134,7 @@ for j = 1 : length(NoiseVec)
         % SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
         
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/itokawa/Std_',num2str(NoiseVec(j)),'/');
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/itokawa/SignalNoise/ShortRun/Std_',num2str(NoiseVec(j)),'/');
         FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
 %              FileName = strcat('Keypoint','.mat');
         
@@ -153,37 +153,37 @@ end
 
 
 
-for i = 1
+%for i = 1
     
-    PointCloud.Signal = MK;
+%    PointCloud.Signal = MK;
     
-    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
+%    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find Difference of Gaussian
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+%    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Detect Extrema
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
+%    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+%        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
     
     %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
     
-    for j = 1 : length(NoiseVec)
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/itokawa/Std_',num2str(NoiseVec(j)));
-        FileName = strcat('Keypoint','.mat');
+%    for j = 1 : length(NoiseVec)
+%        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/itokawa/SignalNoise/ShortRun/Std_',num2str(NoiseVec(j)));
+%        FileName = strcat('Keypoint','.mat');
 
-        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
+%        save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
 
-        FileName = strcat('NMSKeypoint','.mat');
-        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-    end
-end
+%        FileName = strcat('NMSKeypoint','.mat');
+%        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
+%    end
+%end
 
 
 

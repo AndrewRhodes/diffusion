@@ -72,7 +72,7 @@ NormalRotations = findNormalsRotation(PointCloud.Normal);
 % % % % % % % % % %
 tau = PointCloud.Resolution * tauFraction;
 MaxTau = tauNumerator / PointCloud.Resolution;
-NumSteps = round(MaxTau);
+NumSteps = tauNumerator;
 % % % % % % % % % %
 
 load('BunnyCurvature_e1.mat')
