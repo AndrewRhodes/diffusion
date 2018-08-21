@@ -1,7 +1,7 @@
 # Git ignore file for diffusion
 
 *.m~
-#*.off
-#*.ply
-#*.mat
+*.off
+*.ply
+*.mat
 *.avi
