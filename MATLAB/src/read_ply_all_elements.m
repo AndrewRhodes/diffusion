@@ -1,4 +1,4 @@
-function [vertex,face] = read_ply(filename)
+function [vertex, face, vnormal, curvature] = read_ply_all_elements(filename)
 
 % read_ply - read data from PLY file.
 %
@@ -9,9 +9,10 @@ function [vertex,face] = read_ply(filename)
 %
 %   IMPORTANT: works only for triangular meshes.
 %
-%   Copyright (c) 2003 Gabriel Peyr
+%   Copyright (c) 2003 Gabriel Peyr�
 
 [d,c] = plyread(filename);
+
 
 vi = d.face.vertex_indices;
 nf = length(vi);
@@ -21,6 +22,10 @@ for i=1:nf
 end
 
 vertex = [d.vertex.x, d.vertex.y, d.vertex.z];
+
+vnormal = [d.vertex.nx, d.vertex.ny, d.vertex.nz];
+
+curvature = d.vertex.quality;
 
 
 

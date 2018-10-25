@@ -29,7 +29,7 @@ function Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors, Met
 % end
 
 % % % Pre-computation checks and setup
-
+isSign = 0;
 
 if strcmpi(Method, 'Old')
     
@@ -47,8 +47,11 @@ if strcmpi(Method, 'Old')
     
     
     Keypoint.Scale = zeros(MaxNumberFeatures,1);
-    Keypoint.Location = zeros(MaxNumberFeatures,1);
+    Keypoint.Location = zeros(MaxNumberFeatures,3);
+    Keypoint.LocationIndex = zeros(MaxNumberFeatures,1);
+    Keypoint.Normal = zeros(MaxNumberFeatures,3);
     Keypoint.Level = zeros(MaxNumberFeatures,1);
+    Keypoint.Sign = zeros(MaxNumberFeatures,1);
     
     NumFeatures = 0;
     
@@ -92,18 +95,20 @@ if strcmpi(Method, 'Old')
                     if all(CurrentValue > SurroundingValuesBelow)
                         if all(CurrentValue > SurroundingValuesAbove)
                             isFeaturePoint = 1;
+                            isSign = 1;
                         end
                     end
                 elseif all(CurrentValue < SurroundingValuesCurrent)
                     if all(CurrentValue < SurroundingValuesBelow)
                         if all(CurrentValue < SurroundingValuesAbove)
                             isFeaturePoint = 1;
+                            isSign = -1;
                         end
                     end
                 end
                 
             elseif strcmpi(CompareMethod, '<')
-
+                
                 if all(CurrentValue < SurroundingValuesCurrent)
                     if all(CurrentValue < SurroundingValuesBelow)
                         if all(CurrentValue < SurroundingValuesAbove)
@@ -112,6 +117,25 @@ if strcmpi(Method, 'Old')
                     end
                 end
                 
+            elseif strcmpi(CompareMethod, 'special')
+                
+                if CurrentValue < DoG(i, j-1)
+                    if CurrentValue < DoG(i, j+1)
+                        if all(CurrentValue < SurroundingValuesCurrent)
+                            isFeaturePoint = 1;
+                            isSign = -1;
+                        end
+                    end
+                elseif CurrentValue > DoG(i, j-1)
+                    if CurrentValue > DoG(i, j+1)
+                        if all(CurrentValue > SurroundingValuesCurrent)
+                            isFeaturePoint = 1;
+                            isSign = 1;
+                        end
+                    end
+                end
+                
+                
             else 
                 error('findKeypoint:: incorrecte input for CompareMethod')
             end
@@ -119,10 +143,15 @@ if strcmpi(Method, 'Old')
             
             if isFeaturePoint
                 NumFeatures = NumFeatures + 1;
-                Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
-                Keypoint.Location(NumFeatures, 1) = i;
+                Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j);
+%                 Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
+                Keypoint.Location(NumFeatures, 1:3) = PointCloud.Location(i,:);
+                Keypoint.Normal(NumFeatures, 1:3) = PointCloud.Normal(i,:);
+                Keypoint.LocationIndex(NumFeatures, 1) = i;
                 Keypoint.Level(NumFeatures, 1) = j;
                 isFeaturePoint = 0;
+                Keypoint.Sign(NumFeatures,1) = isSign;
+                isSign = 0;
             end
             
             
@@ -136,11 +165,16 @@ if strcmpi(Method, 'Old')
     
     
     % Remove empty elements from initilization
-    ZeroLogic = (Keypoint.Location == 0);
+    ZeroLogic = (Keypoint.LocationIndex == 0);
     
     Keypoint.Scale(ZeroLogic,:) = [];
     Keypoint.Location(ZeroLogic,:) = [];
+    Keypoint.LocationIndex(ZeroLogic,:) = [];
     Keypoint.Level(ZeroLogic,:) = [];
+    Keypoint.Normal(ZeroLogic,:) = [];
+    Keypoint.Sign(ZeroLogic,:) = [];
+    Keypoint.Count = length(Keypoint.LocationIndex);
+    
     
 elseif strcmpi(Method, 'New')
     % % % Pre-computation checks and setup
@@ -208,10 +242,12 @@ elseif strcmpi(Method, 'New')
     Logic = (Level ~= 1 & Level ~= NumDoGLevels);
     
     % Create Keypoint Structure
-    Keypoint.Location = Location(Logic);
+    Keypoint.LocationIndex = Location(Logic);
+    Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
+    Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
     Keypoint.Level = Level(Logic);
     Keypoint.Scale = ScaleParameter(Keypoint.Level);
-    Keypoint.Count = length(Keypoint.Location);
+    Keypoint.Count = length(Keypoint.LocationIndex);
     
 else
     error('findKeypoint:: incorrecte input for Method')

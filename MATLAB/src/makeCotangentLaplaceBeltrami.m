@@ -1,11 +1,10 @@
 
 
 
-function ItL = makeExplicitLaplaceBeltrami( FileName, optionsMeshLP, OrderBDF, StepSize, Alpha)
 
-% if nargout ~= OrderBDF
-%     error('nargout (%i) must be equal to OrderBDF (%i)', nargout, OrderBDF)
-% end
+
+function [ItL, LBM] = makeCotangentLaplaceBeltrami( FileName, OrderBDF, StepSize, Alpha)
+
 
 if Alpha < 0
     error('Expected Alpha >= 0, but input is ''%0.3f''', Alpha)
@@ -17,18 +16,15 @@ end
 
 
 
-
-
-[LapMatMeshWeights, Area, hEdge2] = symmshlp_matrix( FileName, optionsMeshLP);
-
-hEdge = (hEdge2/2);
-
-Alength = length(Area);
-
-A1 = sparse(1:Alength, 1:Alength, 1./Area);
-
-LBM = A1 * LapMatMeshWeights;
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % % % % % Cotangent Laplacian
+[II, JJ, SS, AA] = cotlpmatrix(FileName);
+W=sparse(II, JJ, SS);
+A=AA;
+Alength = length(A);
+A1 = sparse(1:Alength, 1:Alength, 1./A);
+LBM = A1 * W;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ItL = cell(OrderBDF,1);
 
@@ -51,4 +47,17 @@ if OrderBDF == 4
 end
 
 
+
+
 end
+
+
+
+
+
+
+
+
+
+
+

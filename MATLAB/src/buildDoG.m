@@ -21,7 +21,9 @@ for i = 1 : NumLevels - 1
     
     if strcmpi(DoGNormalize, 'DoG')
         
-        DoG(:,i) = (SignalIn(:,i+1) - SignalIn(:,i)) / (ScaleParameterIn(i+1)/ScaleParameterIn(i) - 1) ;
+%         DoG(:,i) = (SignalIn(:,i+1) - SignalIn(:,i)) / (ScaleParameterIn(i+1)/ScaleParameterIn(i) - 1) ;
+%         DoG(:,i) = (SignalIn(:,i+1) - SignalIn(:,i)) * (ScaleParameterIn(i,1)^2 / ( ScaleParameterIn(i+1,1)^2 - ScaleParameterIn(i,1)^2 ) ) ;
+        DoG(:,i) = SignalIn(:,i+1) - SignalIn(:,i) ;
         
     elseif strcmpi(DoGNormalize, 'AbsDoG')
         

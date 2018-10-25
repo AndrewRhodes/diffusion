@@ -60,6 +60,8 @@ if strcmpi(Method, 'Old')
     NumFeatures = 0;
     NumDoGMax  = 0;
     
+    isLess = 0;
+	isMore = 0;
     isFeaturePoint = 0;
     isDoGMax = 0;
     
@@ -125,27 +127,57 @@ if strcmpi(Method, 'Old')
                     end
                 end
                 
+            elseif strcmpi(CompareMethod, 'special')
+                
+                if all(CurrentValue < SurroundingValuesCurrent)
+                    isFeaturePoint = 1;
+                    isLess = 1;
+                elseif all(CurrentValue > SurroundingValuesCurrent)
+                    isFeaturePoint = 1;
+                    isMore = 1;
+                end
+                
+                
             else 
                 error('findKeypoint:: incorrecte input for CompareMethod')
             end
             
-
-            if isFeaturePoint
-                NumFeatures = NumFeatures + 1;
-                Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
-                Keypoint.Location(NumFeatures, 1) = i;
-                Keypoint.Level(NumFeatures, 1) = j;
-                Keypoint.LocationCell{j,1} = [Keypoint.LocationCell{j,1}; i];
-                isFeaturePoint = 0;
-            end
-            
-            if isDoGMax
-                NumDoGMax = NumDoGMax + 1;
-                DoGMaximum.Scale(NumDoGMax, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
-                DoGMaximum.Location(NumDoGMax, 1) = i;
-                DoGMaximum.Level(NumDoGMax, 1) = j;
-                DoGMaximum.LocationCell{j,1} = [DoGMaximum.LocationCell{j,1}; i];
-                isDoGMax = 0;
+            if strcmpi(CompareMethod, 'special')
+                if isFeaturePoint
+                    NumFeatures = NumFeatures + 1;
+                    Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
+                    Keypoint.Location(NumFeatures, 1) = i;
+                    Keypoint.Level(NumFeatures, 1) = j;
+                    Keypoint.LocationCell{j,1} = [Keypoint.LocationCell{j,1}; i];
+                    if isLess
+                        Keypoint.Sign(NumFeatures,1) = -1;
+                    elseif isMore
+                        Keypoint.Sign(NumFeatures,1) = 1;
+                    end
+                    isLess = 0;
+                    isMore = 0;
+                    isFeaturePoint = 0;
+                    
+                end
+                
+            else
+                if isFeaturePoint
+                    NumFeatures = NumFeatures + 1;
+                    Keypoint.Scale(NumFeatures, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
+                    Keypoint.Location(NumFeatures, 1) = i;
+                    Keypoint.Level(NumFeatures, 1) = j;
+                    Keypoint.LocationCell{j,1} = [Keypoint.LocationCell{j,1}; i];
+                    isFeaturePoint = 0;
+                end
+                
+                if isDoGMax
+                    NumDoGMax = NumDoGMax + 1;
+                    DoGMaximum.Scale(NumDoGMax, 1) = ScaleParameter(j) + PointCloud.ResolutionLocal(i,1);
+                    DoGMaximum.Location(NumDoGMax, 1) = i;
+                    DoGMaximum.Level(NumDoGMax, 1) = j;
+                    DoGMaximum.LocationCell{j,1} = [DoGMaximum.LocationCell{j,1}; i];
+                    isDoGMax = 0;
+                end
             end
             
             

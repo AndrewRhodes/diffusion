@@ -61,86 +61,49 @@ KDTree = KDTreeSearcher(PointCloudIn.Location, 'Distance', 'euclidean');
 NeighborFaces.Distance = cell(PointCloudIn.LocationCount,1);
 Neighbors.Distance = cell(PointCloudIn.LocationCount,1);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Distance based neighbor search in loop format
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-for i = 1 : PointCloudIn.LocationCount
-    
-    [Neigh, ~] = rangesearch(KDTree, PointCloudIn.Location(i,:), sqrt(3)*PointCloudIn.ResolutionLocal(i,1));
-    
-    Neigh{1}(1) = [];
-    
-    Neighbors.Distance{i} = [Neigh{1}];
-    
-    [~, IndexA, ~] = intersect(PointCloudIn.Face,[Neigh{1}]);
-    
-    NeighborFaces.Distance{i} = IndexA;
-    
-end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% 
-% 
-% Neighbors = cell(PointCloudIn.LocationCount,1);
-% NeighborFaces = cell(PointCloudIn.LocationCount,1);
-% 
-% if strcmpi(Type, 'connectivity')
+% for i = 1 : PointCloudIn.LocationCount
 %     
-%     for i = 1 : PointCloudIn.FaceCount
-%         Neighbors{PointCloudIn.Face(i,1)} = [Neighbors{PointCloudIn.Face(i,1)} [PointCloudIn.Face(i,2) PointCloudIn.Face(i,3)]];
-%         Neighbors{PointCloudIn.Face(i,2)} = [Neighbors{PointCloudIn.Face(i,2)} [PointCloudIn.Face(i,3) PointCloudIn.Face(i,1)]];
-%         Neighbors{PointCloudIn.Face(i,3)} = [Neighbors{PointCloudIn.Face(i,3)} [PointCloudIn.Face(i,1) PointCloudIn.Face(i,2)]];
-%         
-%         NeighborFaces{PointCloudIn.Face(i,1)} = [NeighborFaces{PointCloudIn.Face(i,1)}, i];
-%         NeighborFaces{PointCloudIn.Face(i,2)} = [NeighborFaces{PointCloudIn.Face(i,2)}, i];
-%         NeighborFaces{PointCloudIn.Face(i,3)} = [NeighborFaces{PointCloudIn.Face(i,3)}, i];
-%         
-%     end
+%     [Neigh, ~] = rangesearch(KDTree, PointCloudIn.Location(i,:), sqrt(3)*PointCloudIn.ResolutionLocal(i,1));
 %     
+%     Neigh{1}(1) = [];
 %     
-%     Neighbors = cellfun(@unique, Neighbors, 'UniformOutput', 0);
-%     NeighborFaces = cellfun(@unique, NeighborFaces, 'UniformOutput', 0);
+%     Neighbors.Distance{i} = [Neigh{1}];
 %     
-% elseif strcmpi(Type, 'distance')
+%     [~, IndexA, ~] = intersect(PointCloudIn.Face,[Neigh{1}]);
 %     
-%     KDTree = KDTreeSearcher(PointCloudIn.Location, 'Distance', 'euclidean');
-%     
-%     %     WaitBar = waitbar(0, sprintf('BDF2 Diffusion %i of %i', 0, PointCloudIn.LocationCount - 1));
-%     tic
-%     for i = 1 : PointCloudIn.LocationCount
-%         
-%         [Neigh, ~] = rangesearch(KDTree, PointCloudIn.Location(i,:), sqrt(2)*PointCloudIn.Resolution);
-%         
-%         Neigh{1}(1) = [];
-%         
-%         Neighbors{i} = [Neigh{1}];
-%         
-%         [~, IndexA, ~] = intersect(PointCloudIn.Face,[Neigh{1}]);
-%         
-%         NeighborFaces{i} = IndexA;
-%         
-%         %         waitbar(i/PointCloudIn.LocationCount, WaitBar, sprintf('BDF2 Diffusion %i of %i', i, PointCloudIn.LocationCount-1));
-%     end
-%     toc
-%     
+%     NeighborFaces.Distance{i} = IndexA;
 %     
 % end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Distance based neighbor search in vectorized format
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+searcher = @(Tree, Point, Radius) rangesearch(KDTree, Point, Radius);
+remover = @(neighbor) (neighbor(2:end));
+
+Neig = cellfun(searcher, repmat({KDTree}, PointCloudIn.LocationCount, 1),...
+        mat2cell(PointCloudIn.Location, ones(PointCloudIn.LocationCount,1), 3),...
+        num2cell(sqrt(3)*PointCloudIn.ResolutionLocal));
+
+Neighbors.Distance = cellfun(remover, Neig, 'Uni', 0);
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Find Neighbor Faces based on Distance
+% Takes a long time
+
+
+% [~, NeighborFaces.Distance, ~] = cellfun(@intersect,...
+%     repmat(mat2cell(PointCloudIn.Face, PointCloudIn.FaceCount, 3), PointCloudIn.LocationCount,1),...
+%     Neighbors.Distance, 'Uni', 0);
+
 
 
 

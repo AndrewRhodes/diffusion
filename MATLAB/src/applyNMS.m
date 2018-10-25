@@ -14,11 +14,39 @@
 
 function NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod)
 
-NumKeypoints = length(Keypoint.Location);
 
-KeypointTree = KDTreeSearcher(PointCloud.Location(Keypoint.Location,:), 'Distance', 'euclidean');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Remove Keypoints that are too small
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Ind = sub2ind(size(DoG), Keypoint.Location, Keypoint.Level);
+RemoveTooSmall = (Keypoint.Scale < PointCloud.ResolutionLocal(Keypoint.LocationIndex));
+
+if isfield(Keypoint, 'Count')
+    Keypoint = rmfield(Keypoint, 'Count');
+end
+FNames = fieldnames(Keypoint);
+for i = 1 : length(FNames)
+    Keypoint.(FNames{i})(RemoveTooSmall,:) = [];
+end
+Keypoint.Count = length(Keypoint.LocationIndex);
+
+% Keypoint.Scale(RemoveTooSmall,:) = [];
+% Keypoint.Location(RemoveTooSmall,:) = [];
+% Keypoint.LocationIndex(RemoveTooSmall,:) = [];
+% Keypoint.Level(RemoveTooSmall,:) = [];
+% Keypoint.Normal(RemoveTooSmall,:) = [];
+% %Keypoint.Sign(RemoveTooSmall,:) = [];
+% Keypoint.Count = length(Keypoint.LocationIndex);
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Remove Keypoints that are spatially close together
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+KeypointTree = KDTreeSearcher(Keypoint.Location, 'Distance', 'euclidean');
+
+Ind = sub2ind(size(DoG), Keypoint.LocationIndex, Keypoint.Level);
 KpDoG = DoG(Ind);
 
 [KpDoGSort, KpDoGInd] = sort(abs(KpDoG),'descend');
@@ -26,19 +54,20 @@ KpDoG = DoG(Ind);
 RemoveInd = [];
 RemoveIndAll = [];
 
-KpIndRemain = ones(NumKeypoints,1);
+KpIndRemain = ones(Keypoint.Count,1);
 Discontinue = 0;
 
-WaitBar = waitbar(0, sprintf('Checking Keypoint %i of %i', 0, NumKeypoints));
+% WaitBar = waitbar(0, sprintf('Checking Keypoint %i of %i', 0, Keypoint.Count));
 
 
-for i = 1 : NumKeypoints
+for i = 1 : Keypoint.Count
 
-    CurrentPoint = PointCloud.Location(Keypoint.Location(KpDoGInd(i)),:);
+    CurrentPoint = Keypoint.Location(KpDoGInd(i),:);
     CurrentScale = Keypoint.Scale(KpDoGInd(i));
     CurrentDoG = KpDoGSort(i);
     CurrentInd = KpDoGInd(i);
-    srange = t_range * PointCloud.ResolutionLocal(Keypoint.Location(KpDoGInd(i)));
+    srange = t_range * CurrentScale;
+%     srange = t_range * PointCloud.ResolutionLocal(Keypoint.Location(KpDoGInd(i)));
     
     if KpIndRemain(KpDoGInd(i))
         
@@ -77,7 +106,7 @@ for i = 1 : NumKeypoints
                             end
                             
                         % DoG local extrema
-                        elseif strcmpi(DoGNormalize, 'DoG') && strcmpi(CompareMethod, '<>')
+                        elseif strcmpi(DoGNormalize, 'NLoG') && strcmpi(CompareMethod, '<>')
                             
                             if abs(NextDoG) > abs(CurrentDoG)
                                 
@@ -94,6 +123,8 @@ for i = 1 : NumKeypoints
                             end
                             
                         end
+                        
+                        
                     end
                 end
                 
@@ -114,21 +145,33 @@ for i = 1 : NumKeypoints
         end
     end                   
     
-    waitbar(i/NumKeypoints, WaitBar, sprintf('Checking Keypoint %i of %i', i, NumKeypoints));
+%     waitbar(i/Keypoint.Count, WaitBar, sprintf('Checking Keypoint %i of %i', i, Keypoint.Count));
     
 end
 
-waitbar(i/NumKeypoints, WaitBar, sprintf('Checking Keypoints Complete'));
-close(WaitBar)
+% waitbar(i/Keypoint.Count, WaitBar, sprintf('Checking Keypoints Complete'));
+% close(WaitBar)
 
 
 NMSKeypoint = Keypoint;
 
-NMSKeypoint.Location(RemoveIndAll) = [];
-NMSKeypoint.Scale(RemoveIndAll) = [];
-NMSKeypoint.Level(RemoveIndAll) = [];
-% NMSKeypoint.LocationCell(RemoveIndAll) = [];
- 
+
+NMSKeypoint = rmfield(NMSKeypoint, 'Count');
+FNames = fieldnames(NMSKeypoint);
+for i = 1 : length(FNames)
+    NMSKeypoint.(FNames{i})(RemoveIndAll,:) = [];
+end
+NMSKeypoint.Count = length(NMSKeypoint.LocationIndex);
+
+
+% NMSKeypoint.Location(RemoveIndAll,:) = [];
+% NMSKeypoint.Normal(RemoveIndAll,:) = [];
+% NMSKeypoint.LocationIndex(RemoveIndAll,:) = [];
+% NMSKeypoint.Scale(RemoveIndAll,:) = [];
+% NMSKeypoint.Level(RemoveIndAll,:) = [];
+% %NMSKeypoint.Sign(RemoveIndAll,:) = [];
+% NMSKeypoint.Count = length(NMSKeypoint.LocationIndex);
+
 
 end
 
