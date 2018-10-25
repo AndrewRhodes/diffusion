@@ -34,7 +34,7 @@ bool generate_sym_meshlp_matrix_geod_matlab(char* filename, unsigned int htype, 
   	}
 
    double maxs, mins, avers;                                                                         
-	tmesh.MeshSize(maxs, mins, avers);
+	tmesh.Mesize(maxs, mins, avers);
 	mexPrintf("avers: %f\n", avers);
 	if(htype == 0){
 		h = avers * hs;
