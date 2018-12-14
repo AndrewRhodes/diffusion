@@ -16,29 +16,25 @@ global ProjectRoot; % Additional Paths
 
 alpha = 1;
 
+Destination = 'Mesh_euc';
 options.rho = 6;
-options.dtype = 'geodesic';
-options.htype = 'psp';
-% options.dtype = 'euclidean';
+options.dtype = 'euclidean'; % 'euclidean', 'geodesic' %
+options.htype = 'ddr'; % 'psp', 'ddr'
 
 ModelFolder = 'buddha/';
 Model = 'Buddha_e1';
 
-BDF = 2;
-% tauFraction = 1/10;
-NumIter = 20;
+BDF = 1;
 NumSteps = 2000;
+tauFraction = 8;
 DoGNormalize = 'NLoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
 
-t_scale = 0.7;
-% t_DoG = 0.9;
+t_scale = 1/sqrt(2);
 t_range = 1/2;
 
-SamplePercVec = [0.05,0.045,0.04,0.035,0.03];
-SamplePercTrue = 0.055;
-
+SamplePercVec = [0.065, 0.06, 0.058, 0.055, 0.053, 0.05, 0.048, 0.045];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -47,24 +43,54 @@ SamplePercTrue = 0.055;
 FileLocationModel = strcat(ProjectRoot,'/models/object/');
 FileNameModelPly = strcat(ModelFolder,Model,'.ply');
 FileNameModelOff = strcat(ModelFolder,Model,'.off');
+FileLocationWD = '/media/andrew/WDRhodes/diffusiondata/';
 
 TmpLocation = strcat(ProjectRoot,'/models/object/',ModelFolder,'meshlab/');
 if ~exist(TmpLocation,'dir')
     mkdir(TmpLocation)
 end
 SaveLocation = strcat(ProjectRoot, '/main/DE/keypointdata/',ModelFolder);
+
+FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/mesh/');
+FileLocationNeighbors = strcat(FileLocationWD,ModelFolder,'neighbors/');
+
+
+setTau = @(e_bar) e_bar / tauFraction;
+setHs = @(e_bar) e_bar^(1/5);
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[PointCloudOriginal.Location, PointCloudOriginal.Face] = read_ply( fullfile( FileLocationModel, FileNameModelPly ) );
+[PointCloudOriginal.Location, PointCloudOriginal.Face, PointCloudOriginal.Normal, PointCloudOriginal.Signal]...
+                = read_ply_all_elements( fullfile( FileLocationModel, FileNameModelPly ) );
 
+            
 PointCloudOriginal.LocationCount = size(PointCloudOriginal.Location,1);
-PointCloudOriginal.FaceCount = size(PointCloudOriginal.Face,1);
+PointCloudOriginal.FaceCount = size(PointCloudOriginal.Face, 1);
+PointCloudOriginal.FaceArea = findFaceArea(PointCloudOriginal.Location,PointCloudOriginal.Face);
+PointCloudOriginal = findMeshResolution(PointCloudOriginal, 'Model');
 
 
-for i = 1 : length(SamplePercVec)
-    i
+PC.faces = PointCloudOriginal.Face;
+PC.vertices = PointCloudOriginal.Location;
+
+DownSampleFacesNum = round(SamplePercVec(end) * PointCloudOriginal.FaceCount);
+PC = reducepatch(PC, DownSampleFacesNum);
+PointCloud.Face = PC.faces;
+PointCloud.Location = PC.vertices;
+PointCloud = findMeshResolution(PointCloud, 'Model');
+
+MaxScale = findScaleParameter(setTau(PointCloud.Resolution), alpha, NumSteps, 'Laplacian', 'Natural');
+MaxScale = MaxScale(end)
+
+clear PointCloud PC DownSampleFacesNum
+
+
+for i = 1 : length(SamplePercVec) 
+    
+    sprintf('DownSample %0.3f %% ',SamplePercVec(i))
     
     % % % % Reduce the point cloud size % % % %
     PC.faces = PointCloudOriginal.Face;
@@ -80,34 +106,34 @@ for i = 1 : length(SamplePercVec)
     % % % % Run python script % % % %
     % Script open meshlab, curvature estimation, model cleaning, and saves as ply.
     
-    [status,cmdout] = system("python3 "...
-                    + strcat(ProjectRoot,'/src/python/callMeshlab_CleanMesh.py')...
+    [status,cmdout] = system("python3 " ...
+                    + strcat(ProjectRoot,'/src/python/callMeshlab_CleanMesh.py') ...
                     + " " + TmpName + " "...
                     + strcat(Model,'_i',num2str(i),'_clean.ply'));
     
     % % % % Read .ply from meshlab % % % %            
     [PointCloud.Location, PointCloud.Face, PointCloud.Normal, PointCloud.Signal]...
-        = read_ply_all_elements( strcat(TmpLocation,Model,'_i',num2str(i),'_clean.ply') );
-    
-    % % % % Remove clean .ply from folder % % % %            
-    [status,cmdout] = system("rm " + strcat(TmpLocation,Model,'_i',num2str(i),'_clean.ply'));
-    
+        = read_ply_all_elements( strcat(TmpLocation,Model,'_i',num2str(i),'_clean.ply') );    
     
     PointCloud.LocationCount = size(PointCloud.Location,1);
     PointCloud.FaceCount = size(PointCloud.Face, 1);
-%     PointCloud.FaceArea = findFaceArea(PointCloud.Location,PointCloud.Face);
-    PointCloud = findMeshResolution(PointCloud, 'Model');
-%     PointCloud = findMeshNormals(PointCloud);
-
+    PointCloud = findMeshResolution(PointCloud, 'Model');   
+    
+    % % % % Remove clean .ply from folder % % % %
+    [status,cmdout] = system("rm " + strcat(TmpLocation,Model,'_i',num2str(i),'_clean.ply'));
+    
+    
     % % % % Save point cloud as .off and .ply % % % %
-    FinalName = strcat(FileLocationModel, ModelFolder, Model, '_',num2str(PointCloud.FaceCount));
-    save_off(PointCloud.Location, PointCloud.Face, strcat(FinalName, '.off') );
-    ply_write(strcat(FinalName, '.ply'), PointCloud.Face, PointCloud.Location);
+    FileNameObject = strcat(FileLocationModel,ModelFolder,'Sample/',Model,'_',num2str(PointCloud.FaceCount));
+    FileNamePly = strcat(FileNameObject, '.ply');
+    FileNameOff = strcat(FileNameObject, '.off');
     
-    
-    
+    save_off(PointCloud.Location, PointCloud.Face, FileNameOff );
+    write_ply_all_elements(FileNamePly ,PointCloud.Face,PointCloud.Location,PointCloud.Normal,PointCloud.Signal)
+
+ 
     % % % % Find and save neighbors % % % %
-    NeighborsFileName = strcat(SaveLocation,Model,'_',num2str(PointCloud.FaceCount),'_Neighbors.mat');
+    NeighborsFileName = strcat(FileLocationNeighbors,Model,'_',num2str(PointCloud.FaceCount),'_Neighbors.mat');
     if ~exist(NeighborsFileName, 'file')
         [Neighbors, ~, PointCloud] = findAdjacentNeighbors(PointCloud);
         save(NeighborsFileName, 'Neighbors', '-v7.3')
@@ -118,54 +144,65 @@ for i = 1 : length(SamplePercVec)
 
 
 
-    % % % % Build the mesh Laplace Beltrami % % % %
-    options.hs = PointCloud.Resolution/2;
-    tau = options.hs^2/4;
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    tau = setTau(PointCloud.Resolution);
+    if strcmp(options.htype, 'psp')
+        options.hs = setHs(PointCloud.Resolution);
+    end    
+    NumSteps = round( (( MaxScale^2 ) / (2 * alpha * tau)) ) + 1
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ItLFileName = strcat(SaveLocation,Model,'_',num2str(PointCloud.FaceCount),'_ItL_rho',num2str(options.rho),'_dtype_',options.dtype,'.mat');
-    
+    ItLFileName = strcat(FileLocationMeshItL,Model,'_',num2str(PointCloud.FaceCount),...
+                '_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),'_',options.dtype(1:3),...
+                '_',options.htype,'_te',num2str(tauFraction),...
+                '_a',num2str(alpha),'.mat');
+                   
+                
     if ~exist(ItLFileName, 'file')
-        ItL = makeExplicitLaplaceBeltrami( strcat(FinalName, '.off') , options, BDF, tau, 1);
+        ItL = makeMeshLaplaceBeltrami( FileNameOff, options, BDF, tau, alpha);
         save(ItLFileName, 'ItL', '-v7.3')
     else
         load(ItLFileName, 'ItL')
     end
     
     % % % % Find Keypoints % % % %
-    ScaleParameter = findScaleParamter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
+    ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
     
-    ParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
+%     ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
     
     Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
     
     DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
     
-    Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-
+%     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
+    [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
+    Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
+    Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
+    Keypoint.Scale = ScaleParameter(Keypoint.Level);        
+        
     NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-  
+    
+
     
     
-    
-    % % % % Save keypoints % % % %
-    FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'Downsample/Perc_',num2str(SamplePercVec(i)),'/');
-    if ~exist(FileLocation ,'dir')
-        mkdir(FileLocation)
+    FileNameSubfix = strcat('Face_',num2str(num2str(PointCloud.FaceCount)),...
+                      '_N',num2str(NumSteps),'.mat');
+    FileNameKeypoint = strcat('Keypoint_', FileNameSubfix);
+    FileNameNMSKeypoint = strcat('NMSKeypoint_', FileNameSubfix);
+
+    if i == 1
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'Sample/',Destination,'/');
+        save(fullfile(FileLocation, FileNameKeypoint), 'Keypoint', '-v7.3')
+        save(fullfile(FileLocation, FileNameNMSKeypoint), 'NMSKeypoint', '-v7.3')
+    else
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'Sample/',Destination,'/Cases/');
+        save(fullfile(FileLocation, FileNameKeypoint), 'Keypoint', '-v7.3')
+        save(fullfile(FileLocation, FileNameNMSKeypoint), 'NMSKeypoint', '-v7.3')
     end
-%     
-%     FileName = strcat('Keypoint.mat');
-%     save(fullfile(strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'Downsample/'), FileName), 'Keypoint', '-v7.3')
-%     
-%     FileName = strcat('NMSKeypoint.mat');
-%     save(fullfile(strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'Downsample/'), FileName), 'NMSKeypoint', '-v7.3')
-
-
-    FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
-    save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
     
-    FileName = strcat('NMSKeypoint','_Iter',num2str(i),'.mat');
-    save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-
+    clear Keypoint NMSKeypoint Signal DoG ItL
 end
 
 

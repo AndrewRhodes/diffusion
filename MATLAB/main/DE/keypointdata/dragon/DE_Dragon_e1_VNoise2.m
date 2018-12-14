@@ -16,20 +16,25 @@ global ProjectRoot; % Additional Paths
 
 alpha = 1;
 
+options.rho = 6;
+options.dtype = 'geodesic'; % 'euclidean', 'geodesic' %
+options.htype = 'psp'; % 'psp', 'ddr'
 
-Destination = 'Umbrella_psp_opt';
-ModelFolder = 'itokawa/';
-Model = 'Itokawa_e1_80000';
+Destination = 'Mesh_psp2';
+ModelFolder = 'dragon/';
+Model = 'Dragon_e1_50000';
 
 
 BDF = 1;
 NumIter = 20;
-NumSteps = 1000;
+NumSteps = 2000;
+% tauFraction = 8;
+% tauFraction = 1;
 DoGNormalize = 'NLoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
 
-t_scale = 1/sqrt(2);
+t_scale = 0.7;
 t_range = 1/2;
 
 NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
@@ -40,18 +45,19 @@ NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 FileLocationModel = strcat(ProjectRoot,'/models/object/');
+FileLocationWD = '/media/andrew/WDRhodes/diffusiondata/';
 FileNameModelPly = strcat(ModelFolder,Model,'.ply');
 FileNameModelOff = strcat(ModelFolder,Model,'.off');
-FileLocationWD = '/media/andrew/WDRhodes/diffusiondata/';
 
 TmpLocation = strcat(ProjectRoot,'/models/object/',ModelFolder,'meshlab/');
 
-
-FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/umbrella/');
+FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/mesh/');
 FileLocationNeighbors = strcat(FileLocationWD,ModelFolder,'neighbors/');
 
 
+% setTau = @(e_bar) e_bar/tauFraction;
 setTau = @(e_bar) e_bar^(2/5);
+setHs = @(e_bar) 2*e_bar^(1/5);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,8 +77,8 @@ PointCloudOriginal = findMeshResolution(PointCloudOriginal, 'Model');
 
 
 for j = 1 : length(NoiseVec)
-    
-    for i = 1 : NumIter
+
+    for i = 6 : 10
         
         sprintf('Std %0.1f : %d',NoiseVec(j),i)
         
@@ -83,7 +89,7 @@ for j = 1 : length(NoiseVec)
         if ~exist(FileNamePly, 'file')
         
             Location = PointCloudOriginal.Location + NoiseVec(j) * PointCloudOriginal.Resolution * ( randn(PointCloudOriginal.LocationCount,1) .* PointCloudOriginal.Normal );
-            TmpName = strcat(TmpLocation, Model, '_sigma', num2str(NoiseVec(j)), '.ply');
+            TmpName = strcat(TmpLocation,Model,'_sigma',num2str(NoiseVec(j)),'.ply');
             ply_write(TmpName, PointCloudOriginal.Face, Location);
 
             % % % % Run python script % % % %
@@ -128,26 +134,38 @@ for j = 1 : length(NoiseVec)
         else
             load(strcat( FileLocationNeighbors, FileNameNeighbors), 'Neighbors');
         end
-
         
         PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
+%         options.hs = PointCloud.Resolution/2;
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % % % % % % % % % %
+%         tau = options.hs^2/4;
+        % % % % % % % % % %
+%         tau = (PointCloud.Resolution/2)^2/4;
+%         tau = PointCloud.Resolution / 8;
         tau = setTau(PointCloud.Resolution);
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%         options.hs = 2 * PointCloud.Resolution^(1/5);
+        options.hs = setHs(PointCloud.Resolution);
         
-        
-
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Setup Laplace-Beltrami
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        FileNameItL = strcat(Model,'_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),...
+                    '_',options.dtype,'_',options.htype,'_2ebar0.2',...
+                    '_a',num2str(alpha),'_sigma',num2str(NoiseVec(j)), '_iter',num2str(i),'.mat');
+%         FileNameItL = strcat(Model,'_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),...
+%             '_',options.dtype,'_',options.htype,'_ebar-',num2str(tauFraction),...
+%             '_a',num2str(alpha),'_sigma',num2str(NoiseVec(j)), '_iter',num2str(i),'.mat');
         
-        ItL = makeUmbrellaLaplaceBeltrami(PointCloud, Neighbors.Connect, tau, alpha, BDF);
         
+        if ~exist( strcat(FileLocationMeshItL, FileNameItL),'file')
+            ItL = makeMeshLaplaceBeltrami( FileNameOff, options, BDF, tau, alpha);
+            save(strcat(FileLocationMeshItL, FileNameItL),'ItL','-v7.3');
+        else
+            load(strcat(FileLocationMeshItL, FileNameItL), 'ItL');
+        end
         
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Scale Parameters
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -160,11 +178,11 @@ for j = 1 : length(NoiseVec)
         % Diffusion of Mean Curvature
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  
+       
         Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
- 
+        
 %         Signal = performBDFDiffusion_cpp(ItL, PointCloud.Signal, NumSteps);
-      
+ 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Find Difference of Gaussian
@@ -178,11 +196,10 @@ for j = 1 : length(NoiseVec)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         %     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-        [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Connect);
+        [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
         Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
         Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
         Keypoint.Scale = ScaleParameter(Keypoint.Level);
-
 
 
         NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
@@ -199,73 +216,6 @@ for j = 1 : length(NoiseVec)
     end
 end
 
-
-
-
-
-for i = 1
-    
-    sprintf('No Noise : %d',i)
-    
-    FileNameNeighbors = strcat(Model,'_Neighbors.mat');
-    if ~exist( strcat( FileLocationNeighbors, FileNameNeighbors), 'file')
-        [Neighbors, NeighborFaces, PointCloudOriginal] = findAdjacentNeighbors(PointCloudOriginal);
-        save(strcat( FileLocationNeighbors, FileNameNeighbors) ,'Neighbors', '-v7.3')
-    else
-        load(strcat( FileLocationNeighbors, FileNameNeighbors), 'Neighbors');
-    end
-    
-    PointCloudOriginal = findLocalResolution(PointCloudOriginal, Neighbors.Connect);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    tau = setTau(PointCloudOriginal.Resolution);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    
-    ItL = makeUmbrellaLaplaceBeltrami(PointCloudOriginal, Neighbors.Connect, tau, alpha, BDF);
-    
-     
-
-    ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
-
-%     ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloudOriginal.Resolution);
-    
-        
-    Signal = performBDFDiffusion(PointCloudOriginal.Signal, NumSteps, ItL);
-%     Signal = performBDFDiffusion_cpp(ItL, PointCloud.Signal, NumSteps);
-
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Find Difference of Gaussian
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Detect Extrema
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-%     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-    [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Connect);
-    Keypoint.Normal = PointCloudOriginal.Normal(Keypoint.LocationIndex,:);
-    Keypoint.Location = PointCloudOriginal.Location(Keypoint.LocationIndex,:);
-    Keypoint.Scale = ScaleParameter(Keypoint.Level);
-
-    
-    NMSKeypoint = applyNMS(PointCloudOriginal, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-
-    
-    FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'VertexNoise/',Destination,'/');
-    FileName = strcat('Keypoint','.mat');
-    
-    save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
-    
-    FileName = strcat('NMSKeypoint','.mat');
-    save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-
-end
 
 
 

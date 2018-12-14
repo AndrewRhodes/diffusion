@@ -16,13 +16,9 @@ global ProjectRoot; % Additional Paths
 
 alpha = 1;
 
-Destination = 'Mesh_euc';
-options.rho = 6;
-options.dtype = 'euclidean'; % 'euclidean', 'geodesic' %
-options.htype = 'ddr'; % 'psp', 'ddr'
-
-ModelFolder = 'itokawa/';
-Model = 'Itokawa_e1';
+Destination = 'Umbrella';
+ModelFolder = 'armadillo/';
+Model = 'Armadillo_e1';
 
 BDF = 1;
 NumSteps = 2000;
@@ -34,9 +30,7 @@ KeypointMethod = 'Old'; % 'Old', 'New'
 t_scale = 1/sqrt(2);
 t_range = 1/2;
 
-% need 8 values
-SamplePercVec = [0.65, 0.62, 0.6, 0.58, 0.55, 0.52, 0.5, 0.48];
-
+SamplePercVec = [0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Model File Location
@@ -53,12 +47,12 @@ if ~exist(TmpLocation,'dir')
 end
 SaveLocation = strcat(ProjectRoot, '/main/DE/keypointdata/',ModelFolder);
 
-FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/mesh/');
+FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/umbrella/');
 FileLocationNeighbors = strcat(FileLocationWD,ModelFolder,'neighbors/');
 
 
 setTau = @(e_bar) e_bar / tauFraction;
-setHs = @(e_bar) e_bar^(1/5);
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -149,26 +143,12 @@ for i = 1 : length(SamplePercVec)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     tau = setTau(PointCloud.Resolution);
-    if strcmp(options.htype, 'psp')
-        options.hs = setHs(PointCloud.Resolution);
-    end    
     NumSteps = round( (( MaxScale^2 ) / (2 * alpha * tau)) ) + 1
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    ItLFileName = strcat(FileLocationMeshItL,Model,'_',num2str(PointCloud.FaceCount),...
-                '_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),'_',options.dtype(1:3),...
-                '_',options.htype,'_te',num2str(tauFraction),...
-                '_a',num2str(alpha),'.mat');
-                   
-                
-    if ~exist(ItLFileName, 'file')
-        ItL = makeMeshLaplaceBeltrami( FileNameOff, options, BDF, tau, alpha);
-        save(ItLFileName, 'ItL', '-v7.3')
-    else
-        load(ItLFileName, 'ItL')
-    end
-    
+    ItL = makeUmbrellaLaplaceBeltrami(PointCloud, Neighbors.Connect, tau, alpha, BDF);
+        
     % % % % Find Keypoints % % % %
     ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
     
@@ -179,7 +159,7 @@ for i = 1 : length(SamplePercVec)
     DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
     
 %     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
-    [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
+    [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Connect);
     Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
     Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
     Keypoint.Scale = ScaleParameter(Keypoint.Level);        
@@ -187,7 +167,6 @@ for i = 1 : length(SamplePercVec)
     NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
     
 
-    
     
     FileNameSubfix = strcat('Face_',num2str(num2str(PointCloud.FaceCount)),...
                       '_N',num2str(NumSteps),'.mat');
