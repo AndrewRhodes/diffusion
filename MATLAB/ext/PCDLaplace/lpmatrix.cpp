@@ -1,11 +1,14 @@
-//#include <mex.h>
+#include <mex.h>
+#include "point_cloud.h"
 #include "comp_llpmatrix.h"
 #include "lpmatrix.h"
 
 
 void generate_pcdlaplace_matrix_sparse_matlab(double *points, unsigned int np, unsigned int dim, unsigned int tdim, unsigned int htype, unsigned int nn, double hs, double rho, vector<unsigned int>& IIV, vector<unsigned int>& JJV, vector<double>& SSV)
 {
+    mexPrintf("here\n");
 	PCloud pcloud(points, np, dim);
+    mexPrintf("here\n");
 
 	//--------------------------------------------------
    //ofstream fout; 
@@ -20,7 +23,8 @@ void generate_pcdlaplace_matrix_sparse_matlab(double *points, unsigned int np, u
 	//--------------------------------------------------
 	double h;
 	double avers = pcloud.average_size(nn);
-	printf("avers: %f\n", avers);
+	//printf("avers: %f\n", avers);
+    mexPrintf("avers: %f\n", avers);
 	if(htype == 0){
 		h = avers * hs;
 	}
@@ -28,7 +32,8 @@ void generate_pcdlaplace_matrix_sparse_matlab(double *points, unsigned int np, u
 		h = hs;
 	}
 
-	printf("h: %f\n", h);
+	//printf("h: %f\n", h);
+    mexPrintf("h: %f\n", h);
 
 	if(tdim == 2){
 		generate_laplace_matrix_sparse_matlab_dim2(pcloud, h, rho, IIV, JJV, SSV);
@@ -61,7 +66,8 @@ void generate_graphlaplace_matrix_sparse_matlab(double *points, unsigned int np,
 	//--------------------------------------------------
 	double h;
 	double avers = pcloud.average_size(nn);
-	printf("avers: %f\n", avers);
+	//printf("avers: %f\n", avers);
+    mexPrintf("avers: %f\n", avers);
 	if(htype == 0){
 		h = avers * hs;
 	}
@@ -69,7 +75,8 @@ void generate_graphlaplace_matrix_sparse_matlab(double *points, unsigned int np,
 		h = hs;
 	}
 
-	printf("h: %f\n", h);
+	//printf("h: %f\n", h);
+    mexPrintf("h: %f\n", h);
 	generate_graph_laplace_matrix_sparse_matlab(pcloud, h, rho, tdim, IIV, JJV, SSV);
 }
 

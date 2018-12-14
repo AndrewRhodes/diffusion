@@ -132,7 +132,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
 	vector<double> SSV;
 	vector<unsigned int> IIV, JJV;
-
+    
 	generate_pcdlaplace_matrix_sparse_matlab(points, np, dim, tdim, htype, nn, hs, rho, IIV, JJV, SSV);
 
 	unsigned int nelem = IIV.size();

@@ -1,3 +1,4 @@
+#include <mex.h>
 #include <math.h>
 #include <queue>
 #include <fstream>
@@ -185,7 +186,8 @@ int PCloud::ReadFromPCD(char *filename)
   fin.open(filename);
   if (!fin)
     {
-      cout << "Cannot open the file " << filename << endl;
+      //cout << "Cannot open the file " << filename << endl;
+      mexPrintf("Cannot open the file ");
       return -1;
     }
 #define MAX_CHARS_PER_LINE 256
@@ -221,7 +223,7 @@ int PCloud::ReadFromPCD(char *filename)
   clear();
   _points = new VPCloud[num_points];
   /*
-   //	mexPrintf("Size of _points = %d, capacity =%d\n", (int)_points.size(), (int)_points.capacity());
+   //	mex("Size of _points = %d, capacity =%d\n", (int)_points.size(), (int)_points.capacity());
    for(i=0; i< num_points; ++i)
    {
    //		add_point( VPCloud( dPoint(3, coord.begin(), coord.end()) ) );
@@ -287,7 +289,9 @@ PCloud::GetBBox()
   _pmin = dPoint(dd(), min.begin(), min.end());
   _pmax = dPoint(dd(), max.begin(), max.end());
 
-  cerr << "BBox: min " << _pmin << " max " << _pmax << endl;
+  mexPrintf("BBox: min %f   max %f", _pmin, _pmax);
+  //cerr << "BBox: min " << _pmin << " max " << _pmax << endl;
+  
 }
 
 double
@@ -342,7 +346,8 @@ PCloud::OutPCloud(char *filename)
   fout.open(filename);
   if (fout.fail())
     {
-      std::cout << "Failed to open file!" << std::endl;
+      //std::cout << "Failed to open file!" << std::endl;
+      mexErrMsgTxt("Failed to open file!");
       return;
     }
   for (unsigned int i = 0; i < p_count(); i++)
