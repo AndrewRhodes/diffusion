@@ -1,6 +1,0 @@
-Mesh Laplacian found on github at
-
-https://github.com/areslp/matlab/tree/master/MeshLP/MeshLP
-
-
-
