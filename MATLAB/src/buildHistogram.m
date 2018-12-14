@@ -34,7 +34,7 @@ Features.Normal = zeros(Keypoint.Count, 3);
 
 
 warning('on','all')
-WaitBar = waitbar(0, sprintf('Building Histogram for Keypoint %i of %i', 0, Keypoint.Count));
+% WaitBar = waitbar(0, sprintf('Building Histogram for Keypoint %i of %i', 0, Keypoint.Count));
 
 searcher = @(Tree, Point, Radius) rangesearch(Tree, Point, Radius);
 Position = cellfun(searcher, repmat({Tree},Keypoint.Count,1), mat2cell(Keypoint.Location, ones(Keypoint.Count,1), 3), num2cell(Keypoint.Scale));
@@ -151,12 +151,12 @@ for i = 1 : Keypoint.Count
 %     pause
 
 
-waitbar(i/Keypoint.Count, WaitBar, sprintf('Building Histogram for Keypoint %i of %i', i, Keypoint.Count));
+% waitbar(i/Keypoint.Count, WaitBar, sprintf('Building Histogram for Keypoint %i of %i', i, Keypoint.Count));
 
 end
 
-waitbar(i/Keypoint.Count, WaitBar, sprintf('Building Histograms Complete'));
-close(WaitBar)
+% waitbar(i/Keypoint.Count, WaitBar, sprintf('Building Histograms Complete'));
+% close(WaitBar)
 
 Features.Count = Keypoint.Count;
 

@@ -12,7 +12,7 @@
 % May need to change dimension:2D,3D to type:Gaussian,Laplacian
 
 % ScaleParameter = findScaleParamter(StepSize, Alpha, NumLevels, Method, Dimension)
-function ScaleParameter = findScaleParamter(StepSize, Alpha, NumLevels, DiffusionMethod, ScaleMethod)
+function ScaleParameter = findScaleParameter(StepSize, Alpha, NumLevels, DiffusionMethod, ScaleMethod)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

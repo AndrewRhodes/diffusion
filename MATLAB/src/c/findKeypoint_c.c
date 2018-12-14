@@ -88,57 +88,59 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       //     mexPrintf("Neigh Val %0.8f \n", DoGPr[dimsDoG[0]*(jDoG+jlevel-1) + (int)NeighborsElem[jneigh]-1]);
       //   }
       // }
+        //if (NumNeighbors > 7){
+            
 
-      // find if less than all neighbors
-      if (CurrentDoG < DoGPr[dimsDoG[0]*(jDoG-1) + jvert]){
-        if (CurrentDoG < DoGPr[dimsDoG[0]*(jDoG+1) + jvert]){
-          for (jlevel = 0; jlevel < 3; jlevel++){
-            for (jneigh = 0; jneigh < NumNeighbors; jneigh++){
-              NeighDoG = DoGPr[dimsDoG[0]*(jDoG+jlevel-1) + (int)NeighborsElem[jneigh]-1];
-              if (CurrentDoG > NeighDoG){
-                LessThan = 0;
-                break;
+          // find if less than all neighbors
+          if (CurrentDoG < DoGPr[dimsDoG[0]*(jDoG-1) + jvert]){
+            if (CurrentDoG < DoGPr[dimsDoG[0]*(jDoG+1) + jvert]){
+              for (jlevel = 0; jlevel < 3; jlevel++){
+                for (jneigh = 0; jneigh < NumNeighbors; jneigh++){
+                  NeighDoG = DoGPr[dimsDoG[0]*(jDoG+jlevel-1) + (int)NeighborsElem[jneigh]-1];
+                  if (CurrentDoG > NeighDoG){
+                    LessThan = 0;
+                    break;
+                  }
+                  if (!LessThan){
+                    break;
+                  }
+                }
               }
-              if (!LessThan){
-                break;
-              }
-            }
-          }
-        } else{ LessThan = 0; }
-      } else{ LessThan = 0; }
+            } else{ LessThan = 0; }
+          } else{ LessThan = 0; }
 
 
       // find if greater than all Neighbors
-      if (CurrentDoG > DoGPr[dimsDoG[0]*(jDoG-1) + jvert]){
-        if (CurrentDoG > DoGPr[dimsDoG[0]*(jDoG+1) + jvert]){
-          for (jlevel = 0; jlevel < 3; jlevel++){
-            for (jneigh = 0; jneigh < NumNeighbors; jneigh++){
-              NeighDoG = DoGPr[dimsDoG[0]*(jDoG+jlevel-1) + (int)NeighborsElem[jneigh]-1];
-              if (CurrentDoG < NeighDoG){
-                GreatThan = 0;
-                break;
+          if (CurrentDoG > DoGPr[dimsDoG[0]*(jDoG-1) + jvert]){
+            if (CurrentDoG > DoGPr[dimsDoG[0]*(jDoG+1) + jvert]){
+              for (jlevel = 0; jlevel < 3; jlevel++){
+                for (jneigh = 0; jneigh < NumNeighbors; jneigh++){
+                  NeighDoG = DoGPr[dimsDoG[0]*(jDoG+jlevel-1) + (int)NeighborsElem[jneigh]-1];
+                  if (CurrentDoG < NeighDoG){
+                    GreatThan = 0;
+                    break;
+                  }
+                  if (!GreatThan){
+                    break;
+                  }
+                }
               }
-              if (!GreatThan){
-                break;
-              }
-            }
-          }
-        } else{ GreatThan = 0; }
-      } else{ GreatThan = 0; }
+            } else{ GreatThan = 0; }
+          } else{ GreatThan = 0; }
 
-      if (LessThan || GreatThan){
-        LocationIndex[count] = jvert + 1;
-        LevelIndex[count] = jDoG + 1;
-        count++;
-        // mexPrintf("Keypoint at Vertex %d,  Level %d \n", jvert+1, jDoG+1);
-      }
+          if (LessThan || GreatThan){
+            LocationIndex[count] = jvert + 1;
+            LevelIndex[count] = jDoG + 1;
+            count++;
+            // mexPrintf("Keypoint at Vertex %d,  Level %d \n", jvert+1, jDoG+1);
+          }
 
 
       // mexPrintf("DoG value DoG[%d,%d] = %0.8f\n", jvert+1, jDoG+1, CurrentDoG);
 
       // loop over the elements in each cell
       // for (jelem=0; jelem < NumElem; jelem++){}
-
+       // } //else{ mexPrintf("Num Neighbors %d\n", NumNeighbors); }
 
     }
 

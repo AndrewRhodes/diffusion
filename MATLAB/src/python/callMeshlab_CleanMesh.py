@@ -12,12 +12,11 @@ filter_script_mlx = """<!DOCTYPE FilterScript>
  <filter name="Remove Faces from Non Manifold Edges"/>
  <filter name="Remove Unreferenced Vertices"/>
  <filter name="Discrete Curvatures">
-  <Param type="RichEnum" value="0" enum_val0="Mean Curvature" name="CurvatureType" enum_cardinality="4" enum_val2="RMS Curvature" description="Type:" enum_val1="Gaussian Curvature" enum_val3="ABS Curvature"/>
+  <Param value="0" enum_val0="Mean Curvature" name="CurvatureType" enum_val1="Gaussian Curvature" enum_val3="ABS Curvature" type="RichEnum" enum_val2="RMS Curvature" description="Type:" enum_cardinality="4" />
  </filter>
 </FilterScript>"""
 
 cwd = os.getcwd()
-
 
 
 def create_tmp_filter_file(filename='filter_file_tmp.mlx'):
@@ -27,11 +26,12 @@ def create_tmp_filter_file(filename='filter_file_tmp.mlx'):
     try:
         os.mkdir(tempdir + "/tmp")
     except OSError as e:
-        print(sys.stderr, "Exception creating folder for meshes: " + str(e))
+        print("\n", sys.stderr, "Exception creating folder for meshes: " + str(e), "\n")
+
 
     with open(tempdir + '/tmp/' + filename, 'w') as f:
         f.write(filter_script_mlx)
-    return tempdir + '/tmp/' + filename
+    return (tempdir + '/tmp/' + filename)
 
 
 
@@ -45,10 +45,9 @@ def run_meshlab(in_file, out_file,
     # Add the filter script
     command += " -s " + filter_script_path
     # Execute command
-    print("Going to execute: " + command)
+    print("\n","Going to execute: \n" + command)
     output = subprocess.call(command, shell=True)
-    print()
-    print("Done:")
+    print("\n","Done: \n")
     print(in_file, " > ", out_file, ": ", str(output))
 
 

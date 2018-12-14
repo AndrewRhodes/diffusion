@@ -1,7 +1,7 @@
 
 
 
-function [Error, NoMatch] = findKeypointErrorNew(PointCloud, FileLocation, NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range)
+function [Error, NoMatch] = keypointErrorTest(PointCloud, FileLocation, NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range, NoisyPCLocation, NoisyPCNeighbors)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -19,6 +19,10 @@ else
     KeypointOriginal = Keypoint;
 end
 
+ScaleParameter = findScaleParameter(PointCloud.Resolution/12, 1/2, 3000, 'Laplacian', 'Natural');
+KeypointOriginal.Scale = ScaleParameter(KeypointOriginal.Level) + PointCloud.ResolutionLocal(KeypointOriginal.LocationIndex);
+
+
 if level_min
     ScaleLogic = KeypointOriginal.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointOriginal.LocationIndex) );
     
@@ -28,8 +32,7 @@ if level_min
         KeypointOriginal.(FNames{jj})(ScaleLogic,:) = [];
     end
     KeypointOriginal.Count = length(KeypointOriginal.LocationIndex);
-    KeypointOriginal.Count
-    
+%     
 %     ScaleLogic = KeypointOriginal.Level > 2000;
 %     KeypointOriginal = rmfield(KeypointOriginal, 'Count');
 %     FNames = fieldnames(KeypointOriginal);
@@ -65,6 +68,17 @@ NoMatch = zeros(NumIter,1);
 
 for i = 1 : NumIter
     
+    [PointCloudNoisy.Location, PointCloudNoisy.Face, PointCloudNoisy.Normal, PointCloudNoisy.Signal]...
+                = read_ply_all_elements( strcat(NoisyPCLocation,'_iter',num2str(i),'.ply') );
+    PointCloudNoisy.LocationCount = size(PointCloudNoisy.Location,1);
+    PointCloudNoisy.FaceCount = size(PointCloudNoisy.Face, 1);
+    
+    load( strcat(NoisyPCNeighbors,'_iter',num2str(i),'.mat'), 'Neighbors')
+    PointCloudNoisy = findLocalResolution(PointCloudNoisy, Neighbors.Connect);
+    PointCloudNoisy = findMeshResolution(PointCloudNoisy, 'Model');
+    ScaleParameter = findScaleParameter(PointCloudNoisy.Resolution/12, 1/2, 3000, 'Laplacian', 'Natural');
+    
+    
     if UseNMS
         load(strcat(NoiseFileLocation, 'NMSKeypoint','_Iter',num2str(i),'.mat'),'NMSKeypoint')
         KeypointIter = NMSKeypoint;
@@ -73,10 +87,12 @@ for i = 1 : NumIter
         KeypointIter = Keypoint;
     end
     
+    KeypointIter.Scale = ScaleParameter(KeypointIter.Level) + PointCloudNoisy.ResolutionLocal(KeypointIter.LocationIndex);
+    
 %     KeypointIter.Count
     
     if level_min
-        ScaleLogic = KeypointIter.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointIter.LocationIndex));
+        ScaleLogic = KeypointIter.Scale < ( level_min * PointCloudNoisy.ResolutionLocal(KeypointIter.LocationIndex));
         
         KeypointIter = rmfield(KeypointIter, 'Count');
         FNames = fieldnames(KeypointIter);
@@ -84,7 +100,7 @@ for i = 1 : NumIter
             KeypointIter.(FNames{jj})(ScaleLogic,:) = [];
         end
         KeypointIter.Count = length(KeypointIter.LocationIndex);
-        KeypointIter.Count
+
         
 %         ScaleLogic = KeypointIter.Level > 2000;
 %         KeypointIter = rmfield(KeypointIter, 'Count');
@@ -106,14 +122,19 @@ for i = 1 : NumIter
     KeypointIterTree = KDTreeSearcher(KeypointIter.Location, 'Distance', 'euclidean');
     
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Replace noisy PC vertice with vertex locations of original PC
+    KeypointIter.Location = PointCloud.Location(KeypointIter.LocationIndex,:);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    
     c = 0;
     Matched = zeros(KeypointIter.Count,1);
         
     for j = 1 : KeypointOriginal.Count
         CurrentPoint = KeypointOriginal.Location(j,:);
         CurrentScale = KeypointOriginal.Scale(j,1);
-%         srange = t_range * CurrentScale;
-        srange = 2 * PointCloud.Resolution;
+        srange = t_range * CurrentScale; % PointCloud.Resolution * 3; %
         [Neigh, Dist] = rangesearch(KeypointIterTree, CurrentPoint, srange);
         
         Neigh = Neigh{:};
@@ -164,92 +185,7 @@ for i = 1 : NumIter
     Error.RelativeRepeat(i,1) = Error.Count(i,1) / KeypointOriginal.Count;
     Error.ScaleRepeat(i,1) = sum(Error.Scale{i,1}) / Error.Count(i,1);
     
-    
-    
-%     c = 0;
-%     Matched = zeros(KeypointOriginal.Count,1);
-%         
-%     for j = 1 : KeypointIter.Count
-%         
-%         CurrentPoint = KeypointIter.Location(j,:);
-%         CurrentScale = KeypointIter.Scale(j);
-% %         srange = t_range * PointCloud.ResolutionLocal(KeypointIter.Location(j));
-%         srange = t_range * CurrentScale;
-%         
-% % %         % [Neigh, Dist] = rangesearch(KeypointTree, CurrentPoint, PointCloud.Resolution);
-%         [Neigh, Dist] = rangesearch(KeypointTree, CurrentPoint, srange);
-% % %         % [Idx, Dist] = knnsearch(KeypointTree, CurrentPoint, 'K', 1, 'IncludeTies', true, 'Distance', 'euclidean');
-%         
-%         
-%         Neigh = Neigh{:};
-%         Dist = Dist{:};
-%         
-%         % Remove from consideration the original keypoints that have
-%         % already been matched.
-%         Remove = [];
-%         for k = 1 : length(Neigh)
-%             if Matched(Neigh)
-%                 Remove = [Remove; k];
-%             end
-%         end
-%         if ~isempty(Neigh)
-%             Neigh(Remove) = [];
-%             Dist(Remove) = [];
-%         end
-%         
-%         
-%         
-%         if isempty(Neigh)
-%             
-%             NoMatch(i,1) = NoMatch(i,1) + 1;
-%             %             continue;
-%             
-% %         elseif length(Neigh) == 1
-% %             
-% %             ScaleRatio = min(KeypointOriginal.Scale(Neigh), CurrentScale) / max(KeypointOriginal.Scale(Neigh), CurrentScale) ;
-% %             
-% %             if ScaleRatio >= t_scale
-% %                 c = c + 1;
-% %                 Error.Scale{i}(c,1) = findSphereRepeat(KeypointOriginal.Location(Neigh,:), KeypointOriginal.Scale(Neigh), CurrentPoint, CurrentScale);
-% %                 Error.Distance{i}(c,1) = Dist;
-% %                 Error.Count(i,1) = Error.Count(i,1) + 1;
-% %                 %                 Match(i,1) = Match(i,1) + 1;
-% %                 Matched(Neigh) = 1;
-% %             else
-% %                 NoMatch(i,1) = NoMatch(i,1) + 1;
-% %             end
-%             
-%         else%if length(Neigh) > 1
-%             
-%             ScaleRatio = min(KeypointOriginal.Scale(Neigh), CurrentScale) ./ max(KeypointOriginal.Scale(Neigh), CurrentScale) ;
-%             ScaleLogic = ScaleRatio >= t_scale;
-%             
-%             if nnz(ScaleLogic) == 0
-%                 NoMatch(i,1) = NoMatch(i,1) + 1;
-%             else
-%                 [MaxVal, MaxLoc] = max(ScaleRatio);
-%                 c = c + 1;
-%                 Error.Scale{i}(c,1) = findSphereRepeat(KeypointOriginal.Location(Neigh(MaxLoc),:), KeypointOriginal.Scale(Neigh(MaxLoc)), CurrentPoint, CurrentScale);
-%                 Error.Distance{i}(c,1) = Dist(MaxLoc);
-%                 Error.Count(i,1) = Error.Count(i,1) + 1;
-%                 %                 Match(i,1) = Match(i,1) + 1;
-%                 Matched(Neigh(MaxLoc)) = 1;
-%             end
-%             
-%         end
-%         
-%         if nnz(Matched) == KeypointOriginal.Count
-%             warning('All Keypoint Matched Early')
-%             break;
-%         end
-%         
-%         
-%     end
-%     
-%     Error.RelativeRepeat(i,1) = Error.Count(i,1) / KeypointIter.Count;
-%     Error.ScaleRepeat(i,1) = sum(Error.Scale{i,1}) / Error.Count(i,1);
-%     
-    
+        
     
 end
 

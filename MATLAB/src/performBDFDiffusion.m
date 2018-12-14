@@ -41,8 +41,8 @@ end
 function SignalOut = runBDF1(SignalOut, NumSteps, ItL)
 
 
-% WaitBar = waitbar(0, sprintf('BDF1 Diffusion %i of %i', 0, NumSteps - 1));
-% disp("i")
+%WaitBar = waitbar(0, sprintf('BDF1 Diffusion %i of %i', 0, NumSteps - 1));
+
 for i = 1 : NumSteps - 1
     
     
@@ -53,11 +53,11 @@ for i = 1 : NumSteps - 1
         disp(flag)
     end
     
-%     waitbar(i/NumSteps, WaitBar, sprintf('BDF1 Diffusion %i of %i', i, NumSteps-1));
+%	  waitbar(i/NumSteps, WaitBar, sprintf('BDF1 Diffusion %i of %i', i, NumSteps-1));
 end
 
-% waitbar(i/NumSteps, WaitBar, sprintf('BDF1 Diffusion Complete'));
-% close(WaitBar)
+%waitbar(i/NumSteps, WaitBar, sprintf('BDF1 Diffusion Complete'));
+%close(WaitBar)
 
 end
 
@@ -67,7 +67,7 @@ end
 function SignalOut = runBDF2(SignalOut, NumSteps, ItL, I23tL)
 
 
-% WaitBar = waitbar(0, sprintf('BDF2 Diffusion %i of %i', 0, NumSteps - 1));
+%WaitBar = waitbar(0, sprintf('BDF2 Diffusion %i of %i', 0, NumSteps - 1));
 
 for i = 1 : NumSteps - 1
     
@@ -84,8 +84,8 @@ for i = 1 : NumSteps - 1
 %     waitbar(i/NumSteps, WaitBar, sprintf('BDF2 Diffusion %i of %i', i, NumSteps-1));
 end
 
-% waitbar(i/NumSteps, WaitBar, sprintf('BDF2 Diffusion Complete'));
-% close(WaitBar)
+%waitbar(i/NumSteps, WaitBar, sprintf('BDF2 Diffusion Complete'));
+%close(WaitBar)
 
 
 end

@@ -40,13 +40,16 @@ A1 = sparse(1:Alength, 1:Alength, 1./Area);
 
 LBM = A1 * LapMatMeshWeights;
 
+% LBMdiag = sparse(1:Alength, 1:Alength, abs(1./diag(LBM)));
+% 
+% LBM = LBMdiag * LBM;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 ItL = cell(OrderBDF,1);
 
 ItL{1,1} = speye(Alength, Alength) - Alpha * StepSize * LBM;
-
 
 if OrderBDF == 2 || OrderBDF == 3 || OrderBDF == 4
 %     I23tL
