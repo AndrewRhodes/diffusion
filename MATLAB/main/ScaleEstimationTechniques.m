@@ -78,12 +78,13 @@ ax.YAxis.FontSize = 50;
 
 
 
-%% Method of Faidarfard 
+%% Method of Fadaifard 
 
 maxsamplef = [0.4082, 4, 8];
-
+figure 
+hold on
 for n = maxsamplef
-    
+    n = 8
     wsf = (0:0.05:n)';
     wsf2 = wsf.^2;
     wsf4 = wsf2.^2;
@@ -92,6 +93,7 @@ for n = maxsamplef
     for i = 1 : NumSteps
         fs_frequency(i,1) = sqrt( 0.5*sum(wsf4') ./ sum( (wsf2').*sum( log(1 + ones(i,1) * (wsf2')) ,1) ,2) );
     end
+    
     
     plot(ws, exp(-0.5*ws2 / fs_frequency(j)^2), 'm-','linewidth',5)
     
@@ -110,10 +112,10 @@ tb1.HeadWidth = 25;
 
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot in log-space
-
+% 
 % figure
 % j = 3;
 % plot(ws,log(H1(:,j)),'k.')
@@ -135,7 +137,7 @@ tb1.HeadWidth = 25;
 % plot(ws, log(exp(-0.5*ws2 / ScaleParameterFrequency2(j,1)^2)),'b-')
 % plot(ws, log(exp(-0.5*ws2 * (2*j*tau))),'g--')
 % axis([0 4 -20 0])
-
+% 
 
 
 

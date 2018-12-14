@@ -1,0 +1,10 @@
+<!DOCTYPE FilterScript>
+<FilterScript>
+ <filter name="Remove Duplicate Faces"/>
+ <filter name="Remove Duplicate Vertices"/>
+ <filter name="Remove Unreferenced Vertices"/>
+ <filter name="Remove Faces from Non Manifold Edges"/>
+ <filter name="Discrete Curvatures">
+  <Param value="0" enum_val0="Mean Curvature" name="CurvatureType" enum_val1="Gaussian Curvature" enum_val3="ABS Curvature" type="RichEnum" enum_val2="RMS Curvature" description="Type:" enum_cardinality="4" tooltip="Choose the curvatures. Mean and Gaussian curvature are computed according the technique described in the Desbrun et al. paper.&lt;br>Absolute curvature is defined as |H|+|K| and RMS curvature as sqrt(4* H^2 - 2K) as explained in &lt;br>&lt;i>Improved curvature estimationfor watershed segmentation of 3-dimensional meshes &lt;/i> by S. Pulla, A. Razdan, G. Farin. "/>
+ </filter>
+</FilterScript>

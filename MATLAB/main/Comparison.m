@@ -9,10 +9,10 @@
 
 
 close all
-clear 
+clear
 clc
 
-ProjectRoot = addprojectpaths % Additional Paths
+global ProjectRoot; % Additional Paths
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % User Defined Criteria
@@ -21,7 +21,7 @@ ProjectRoot = addprojectpaths % Additional Paths
 % 2D image diffusion
 MaxLevel = 70;
 gausswindow = 2;
-tau2D = 0.75;
+sigma2D = 0.75;
 
 MaxImageSize = 30;
 MiddleImage = MaxImageSize / 2;
@@ -39,7 +39,7 @@ porder = 3;
 Lorder = 2;
 dim = 3;
 tauImplicit = spacing / 4;
-tauImplicit = tau2D^2/2;
+tauImplicit = sigma2D^2/2;
 MaxTauImplicit = 70;
 NumStepsImplicit = round(MaxTauImplicit / tauImplicit);
 % NumStepsImplicit = MaxTauImplicit / sigma^2
@@ -61,7 +61,7 @@ Signal2D(MiddleImage, MiddleImage, 1) = 1;
 
 
 [x,y] = meshgrid(-gausswindow:gausswindow,-gausswindow:gausswindow);
-Gauss =  (1/(2*pi*tau2D^2)) .* exp( -(x.^2 + y.^2) ./ (2*tau2D^2) );
+Gauss =  (1/(2*pi*sigma2D^2)) .* exp( -(x.^2 + y.^2) ./ (2*sigma2D^2) );
 Gauss = Gauss./sum(Gauss(:));
 
 for i = 1 : MaxLevel - 1
@@ -92,8 +92,8 @@ Image2Dcenter = sub2ind([MaxImageSize, MaxImageSize], MiddleImage, MiddleImage);
 RadialDist2D = sqrt(sum(bsxfun(@minus, xyImage2D, xyImage2D(Image2Dcenter,:)).^2,2));
 
 
+ScaleParameterImage = findScaleParameter(sigma2D, 1, MaxLevel, 'Gaussian', 'Natural');
 
-ScaleParameterImage = findScaleParamter(tau2D, MaxLevel, 1, 2);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Figures for paper %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -102,7 +102,7 @@ xgauss = 0:0.01:20;
 for i = 1 : MaxLevel -1
     clf
     i
-    t2 = (i-1) * tau2D^2
+    t2 = (i-1) * sigma2D^2
     sqrt(t2)
     
     Gaus = exp( -(xgauss.^2) / (2*t2) );
@@ -120,7 +120,7 @@ for i = 1 : MaxLevel -1
     ylabel('Intensity')
     xlabel('Radial Distance')
 
-    pause
+%     pause
 end
 
 % % tau2D = 0.5; [6,21,61]
@@ -132,7 +132,7 @@ for i = [5,15,35]
     figure
 
     i;
-    t2 = (i-1) * tau2D^2
+    t2 = (i-1) * sigma2D^2
     
     Gaus = exp( -(xgauss.^2) / (2*t2) );
     Gaus = Gaus  * max(max(Signal2D(:,:,i)));

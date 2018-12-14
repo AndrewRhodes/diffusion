@@ -1,6 +1,10 @@
 <!DOCTYPE FilterScript>
 <FilterScript>
+ <filter name="Remove Duplicate Faces"/>
+ <filter name="Remove Duplicate Vertices"/>
+ <filter name="Remove Faces from Non Manifold Edges"/>
+ <filter name="Remove Unreferenced Vertices"/>
  <filter name="Discrete Curvatures">
-  <Param type="RichEnum" value="0" enum_val0="Mean Curvature" name="CurvatureType" enum_cardinality="4" enum_val2="RMS Curvature" description="Type:" enum_val1="Gaussian Curvature" enum_val3="ABS Curvature"/>
+  <Param value="0" enum_val0="Mean Curvature" name="CurvatureType" enum_val1="Gaussian Curvature" enum_val3="ABS Curvature" type="RichEnum" enum_val2="RMS Curvature" description="Type:" enum_cardinality="4" />
  </filter>
 </FilterScript>
