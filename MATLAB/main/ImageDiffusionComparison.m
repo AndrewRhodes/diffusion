@@ -91,8 +91,8 @@ for i = 1 : MaxLevel - 1
     
     Signal2D(:,:,i+1) = imfilter(Signal2D(:,:,i), Gauss,'replicate');
 
-    imshow(Signal2D(:,:,i+1))
-    drawnow
+%     imshow(Signal2D(:,:,i+1))
+%     drawnow
     
 %     ScaleParamterImage(i+1) = sqrt(2*i * tau2D^2);
     ScaleParamterImage(i+1) = sqrt(i) * tau2D;
@@ -215,7 +215,7 @@ PointCloud.Signal = zeros(PointCloud.LocationCount,1);
 PointCloud.Signal = reshape(Image, [],1);
 
 
-Neighbors3D = findAdjacentNeighbors(PointCloud.Face, PointCloud.Location);
+Neighbors3D = findAdjacentNeighbors(PointCloud);
 
 save_off(PointCloud.Location, PointCloud.Face, fullfile( FileLocation, FileName));
 

@@ -16,7 +16,7 @@ tau = 1;
 %% Method of cutoff frequency 
 
 maxsample = 10; 
-ws = 0 : 0.01 : maxsample;
+ws = -maxsample : 0.01 : maxsample;
 NumSample = length(ws);
 ScaleParameterSpatial = zeros(NumSteps,1);
 ScaleParameterFrequency = zeros(NumSteps,1);
@@ -48,17 +48,8 @@ end
 %% Method of natural scale growth 
 
 
-ScaleParameterSpatialNatural = zeros(NumSteps,1);
 
-for i = 1 : NumSteps - 1
-   
-    ScaleParameterSpatialNatural(i+1,1) = sqrt(2*i*tau);
-
-end
-
-
-
-
+ScaleParameterSpatialNatural = sqrt(2*(0:NumSteps-1)'*tau);
 
 j = 2;
 figure

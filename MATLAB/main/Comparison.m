@@ -28,7 +28,7 @@ MiddleImage = MaxImageSize / 2;
 
 
 % 3D explcit surface diffusion
-eSS = 0.25; % Explicit Surface Spacing
+eSS = 1; % Explicit Surface Spacing
 MaxSurfSize = 30;
 
 alpha = 1;
@@ -104,6 +104,7 @@ for i = 1 : MaxLevel -1
     i
     t2 = (i-1) * sigma2D^2
     sqrt(t2)
+    sqrt(i-1) * sigma2D
     
     Gaus = exp( -(xgauss.^2) / (2*t2) );
     Gaus = Gaus  * max(max(Signal2D(:,:,i)));
@@ -120,7 +121,7 @@ for i = 1 : MaxLevel -1
     ylabel('Intensity')
     xlabel('Radial Distance')
 
-%     pause
+    pause
 end
 
 % % tau2D = 0.5; [6,21,61]

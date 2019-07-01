@@ -14,14 +14,14 @@ void generate_sym_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsign
 	//compute area for each vertexs
 	AAV.clear();
 	AAV.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -29,7 +29,7 @@ void generate_sym_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsign
 		AAV[vid1] += farea / 3;
 		AAV[vid2] += farea / 3;
 	}
-	
+
 	//compute the laplacian matrix
 
 	vector<pair<unsigned int, double> >vgdists;
@@ -41,9 +41,9 @@ void generate_sym_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsign
 		//cout<<"i: "<<i<<"\t \r";
 		//mexPrintf("i: %d\r", i);
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
-		
+
 		for(unsigned int j = 0; j < vgdists.size(); j ++){
 			unsigned int vid = vgdists[j].first;
 			if( vid <= i ){
@@ -83,14 +83,14 @@ void generate_sym_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<u
 	//compute area for each vertexs
 	AAV.clear();
 	AAV.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -98,9 +98,9 @@ void generate_sym_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<u
 		AAV[vid1] += farea / 3;
 		AAV[vid2] += farea / 3;
 	}
-	
+
 	//for geodesic computation
-	vector<double> points;   
+	vector<double> points;
 	vector<unsigned int> faces;
 	for(unsigned int i = 0; i < nv; i ++){
 		points.push_back((mesh.vertex(i).coord())[0]);
@@ -117,7 +117,7 @@ void generate_sym_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<u
 	geod_mesh.initialize_mesh_data(points, faces);    //create internal mesh data structure including edges
 	geodesic::GeodesicAlgorithmExact algorithm(&geod_mesh); //create exact algorithm for the mesh
 
-	
+
 	//compute the laplacian matrix
 	vector<pair<unsigned int, double> >vgdists;
 	vector<double> totalweight;
@@ -128,7 +128,7 @@ void generate_sym_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<u
 		//cout<<"i: "<<i<<"\t \r";
 		//mexPrintf("i: %d\r", i);
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Geodesic_vdist(i, geod_mesh, algorithm, vgdists, h * rho);
 		//compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
 
@@ -172,14 +172,14 @@ void generate_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsigned i
 	//compute area for each vertexs
 	vector<double> vareas;
 	vareas.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -187,7 +187,7 @@ void generate_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsigned i
 		vareas[vid1] += farea / 3;
 		vareas[vid2] += farea / 3;
 	}
-	
+
 	//compute the laplacian matrix
 
 	vector<pair<unsigned int, double> >vgdists;
@@ -198,9 +198,9 @@ void generate_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsigned i
 		//cout<<"i: "<<i<<"\t \r";
 		//mexPrintf("i: %d\r", i);
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
-		
+
 		totalweight = 0;
 		for(unsigned int j = 0; j < vgdists.size(); j ++){
 			unsigned int vid = vgdists[j].first;
@@ -219,12 +219,12 @@ void generate_meshlp_matrix(TMesh& mesh, double h, double rho, vector<unsigned i
 
 			totalweight -= weight;
 		}
-		
+
 		IIV.push_back(i + 1);
 		JJV.push_back(i + 1);
 		SSV.push_back(totalweight);
 	}
-	
+
 	mexPrintf("\n");
 }
 
@@ -237,14 +237,14 @@ void generate_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<unsig
 	//compute area for each vertexs
 	vector<double> vareas;
 	vareas.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -252,9 +252,9 @@ void generate_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<unsig
 		vareas[vid1] += farea / 3;
 		vareas[vid2] += farea / 3;
 	}
-	
+
 	//for geodesic computation
-	vector<double> points;   
+	vector<double> points;
 	vector<unsigned int> faces;
 	for(unsigned int i = 0; i < nv; i ++){
 		points.push_back((mesh.vertex(i).coord())[0]);
@@ -280,10 +280,10 @@ void generate_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<unsig
 		//cout<<"i: "<<i<<"\t \r";
 		//mexPrintf("i: %d\r", i);
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Geodesic_vdist(i, geod_mesh, algorithm, vgdists, h * rho);
 		//compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
-		
+
 		totalweight = 0;
 		for(unsigned int j = 0; j < vgdists.size(); j ++){
 			unsigned int vid = vgdists[j].first;
@@ -302,7 +302,7 @@ void generate_meshlp_matrix_geod(TMesh& mesh, double h, double rho, vector<unsig
 
 			totalweight -= weight;
 		}
-		
+
 		IIV.push_back(i + 1);
 		JJV.push_back(i + 1);
 		SSV.push_back(totalweight);
@@ -318,14 +318,14 @@ void generate_meshlp_matrix_adp(TMesh& mesh, double hs, double rho, vector<unsig
 	//compute area for each vertexs
 	vector<double> vareas;
 	vareas.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -359,9 +359,9 @@ void generate_meshlp_matrix_adp(TMesh& mesh, double hs, double rho, vector<unsig
 
 		double hh = h * h;
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
-		
+
 		totalweight = 0;
 		for(unsigned int j = 0; j < vgdists.size(); j ++){
 			unsigned int vid = vgdists[j].first;
@@ -380,12 +380,12 @@ void generate_meshlp_matrix_adp(TMesh& mesh, double hs, double rho, vector<unsig
 
 			totalweight -= weight;
 		}
-		
+
 		IIV.push_back(i + 1);
 		JJV.push_back(i + 1);
 		SSV.push_back(totalweight);
 	}
-	
+
 	mexPrintf("\n");
 }
 
@@ -397,14 +397,14 @@ void generate_meshlp_matrix_adp_geod(TMesh& mesh, double hs, double rho, vector<
 	//compute area for each vertexs
 	vector<double> vareas;
 	vareas.resize(nv, 0);
-		
+
 	unsigned int vid0, vid1, vid2;
 	double farea;
 	for(unsigned int f = 0; f < nf; f ++){
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		farea = norm(vv) / 2.0;
 
@@ -414,7 +414,7 @@ void generate_meshlp_matrix_adp_geod(TMesh& mesh, double hs, double rho, vector<
 	}
 
 	//for geodesic computation
-	vector<double> points;   
+	vector<double> points;
 	vector<unsigned int> faces;
 	for(unsigned int i = 0; i < nv; i ++){
 		points.push_back((mesh.vertex(i).coord())[0]);
@@ -455,10 +455,10 @@ void generate_meshlp_matrix_adp_geod(TMesh& mesh, double hs, double rho, vector<
 
 		double hh = h * h;
 
-		vgdists.clear();		
+		vgdists.clear();
 		compute_one2part_Geodesic_vdist(i, geod_mesh, algorithm, vgdists, h * rho);
 		//compute_one2part_Euclidean_vdist(i, mesh, vgdists, h * rho);
-		
+
 		totalweight = 0;
 		for(unsigned int j = 0; j < vgdists.size(); j ++){
 			unsigned int vid = vgdists[j].first;
@@ -477,12 +477,12 @@ void generate_meshlp_matrix_adp_geod(TMesh& mesh, double hs, double rho, vector<
 
 			totalweight -= weight;
 		}
-		
+
 		IIV.push_back(i + 1);
 		JJV.push_back(i + 1);
 		SSV.push_back(totalweight);
 	}
-	
+
 	mexPrintf("\n");
 }
 
@@ -491,7 +491,7 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 {
 	unsigned int nv = mesh.v_count();
 	unsigned int nf = mesh.f_count();
-		
+
 	//compute the center and area for each facets
 	vector<double> fareas;
 	fareas.resize(3 * nf);
@@ -503,14 +503,14 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 		vid0 = mesh.facet(f).vert(0);
 		vid1 = mesh.facet(f).vert(1);
 		vid2 = mesh.facet(f).vert(2);
-		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), 
+		VECTOR3 vv = cross( mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(),
 								  mesh.vertex(vid2).coord() - mesh.vertex(vid0).coord() );
 		double area = norm(vv);
-		
+
 		double l0 = sqrt( fabs(dot(mesh.vertex(vid1).coord() - mesh.vertex(vid2).coord(), mesh.vertex(vid1).coord() - mesh.vertex(vid2).coord())) );
 		double l1 = sqrt( fabs(dot(mesh.vertex(vid0).coord() - mesh.vertex(vid2).coord(), mesh.vertex(vid0).coord() - mesh.vertex(vid2).coord())) );
 		double l2 = sqrt( fabs(dot(mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord(), mesh.vertex(vid1).coord() - mesh.vertex(vid0).coord())) );
-		
+
 		assert(l0 > MYNZERO && l1 > MYNZERO && l2 > MYNZERO);
 
 		double h0 = area / l0;
@@ -535,9 +535,9 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 		// 	fareas[3 * f] = 1.0 / 8.0 * (l1 * l1 * fcots[3 * f + 1] + l2 * l2 * fcots[3 * f + 2]);
 		// 	fareas[3 * f + 1] = 1.0 / 8.0 * (l0 * l0 * fcots[3 * f] + l2 * l2 * fcots[3 * f + 2]);
 		// 	fareas[3 * f + 2] = 1.0 / 8.0 * (l1 * l1 * fcots[3 * f + 1] + l0 * l0 * fcots[3 * f]);
-		// }	
+		// }
 		// else
-		//-------------------------------------------------- 
+		//--------------------------------------------------
 		{
 			if( fcots[3 * f] >= 0 && fcots[3 * f + 1] >= 0 && fcots[3 * f + 2] >= 0 ){
 				fareas[3 * f] = 1.0 / 8.0 * (l1 * l1 * fcots[3 * f + 1] + l2 * l2 * fcots[3 * f + 2]);
@@ -605,13 +605,13 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 			// matrix[vid1 * nv + i] -= fcots[3 * f + (ind + 2) % 3];
 			// matrix[vid2 * nv + i] -= fcots[3 * f + (ind + 1) % 3];
 			// matrix[i * nv + i] += fcots[3 * f + (ind + 2) % 3] + fcots[3 * f + (ind + 1) % 3];
-			//-------------------------------------------------- 
+			//--------------------------------------------------
 		}
-		
+
 		//cout<<"Amix: "<<Amix<<endl;
 		assert(Amix > 0);
 		Amix *= 2;
-		
+
 		for(map<unsigned int, double>::iterator iter = adj_weight.begin(); iter != adj_weight.end(); iter ++){
 			IIV.push_back(i + 1);
 			JJV.push_back(iter->first + 1);
@@ -622,7 +622,7 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 		SSV.push_back(totalweight);
 
 		DDV[i] = Amix;
-	}	
+	}
 	mexPrintf("\n");
 
 }
@@ -643,37 +643,37 @@ void generate_Xu_Meyer_laplace_matrix(TMesh& mesh,  vector<unsigned int>& IIV,  
 void compute_one2part_Euclidean_vdist(unsigned int vid_start, TMesh& mesh, vector<pair<unsigned int, double> >& vgdists, double maxdist)
 {
 	for(unsigned int j = 0; j < mesh.v_count(); j ++){
-		double d = sqrt( dot(mesh.vertex(vid_start).coord() - mesh.vertex(j).coord(),  
+		double d = sqrt( dot(mesh.vertex(vid_start).coord() - mesh.vertex(j).coord(),
 									mesh.vertex(vid_start).coord() - mesh.vertex(j).coord()) );
 		if(d <= maxdist){
 		 	vgdists.push_back( make_pair(j, d) );
 		}
 	}
-	
+
 
 	//--------------------------------------------------
 	// unsigned int nv = mesh.v_count();
 	// queue<unsigned int> vert_queue;
-	// //mark a vertex which indicates if it is visited 
+	// //mark a vertex which indicates if it is visited
 	// vector<bool> visited_vector;
 	// visited_vector.resize(nv, false);
 	// vert_queue.push(vid_start);
 	// visited_vector[vid_start] = true;
-	// //terminate the while loop if exhaust the vert_heap or compute 
-	// //the geodesic distance to all other vertices which are connected 
+	// //terminate the while loop if exhaust the vert_heap or compute
+	// //the geodesic distance to all other vertices which are connected
 	// //to the vertex vid
 	// while( (!vert_queue.empty()) ){
-	// 	//exact the first element from the heap  
+	// 	//exact the first element from the heap
 	// 	unsigned int vid = vert_queue.front();
 	// 	vert_queue.pop();
-	// 	double d =  sqrt( dot(mesh.vertex(vid_start).coord() - mesh.vertex(vid).coord(), 
+	// 	double d =  sqrt( dot(mesh.vertex(vid_start).coord() - mesh.vertex(vid).coord(),
 	// 				 mesh.vertex(vid_start).coord() - mesh.vertex(vid).coord()) );
 	// 	if(d > maxdist){
 	// 		continue;
 	// 	}
 	// 	vgdists.push_back(make_pair(vid, d));
-	// 	//for each adjacent vertex on mesh, modify its geodesic distance and move its position 
-	// 	//in the heap if necessary. 
+	// 	//for each adjacent vertex on mesh, modify its geodesic distance and move its position
+	// 	//in the heap if necessary.
 	// 	for(unsigned int k = 0; k < mesh.vertex(vid).n_verts(); k ++){
 	// 		unsigned int kk = mesh.vertex(vid).vert(k);
 	// 		if( !visited_vector[kk]){
@@ -683,13 +683,13 @@ void compute_one2part_Euclidean_vdist(unsigned int vid_start, TMesh& mesh, vecto
 	// 	}//for k
 	// }//while
 	// //sort(vgdists.begin(), vgdists.end());
-	//-------------------------------------------------- 
+	//--------------------------------------------------
 }
 
 
 void compute_one2part_Geodesic_vdist(unsigned int vid_start, geodesic::Mesh& geod_mesh, geodesic::GeodesicAlgorithmExact& algorithm, vector<pair<unsigned int, double> >& vgdists, double maxdist)
 {
-	geodesic::SurfacePoint source(&geod_mesh.vertices()[vid_start]);      //create source 
+	geodesic::SurfacePoint source(&geod_mesh.vertices()[vid_start]);      //create source
 	vector<geodesic::SurfacePoint> all_sources(1,source);  //in general, there could be multiple sources, but now we have only one
 	algorithm.propagate(all_sources, maxdist);   //cover the whole mesh
 
@@ -703,4 +703,3 @@ void compute_one2part_Geodesic_vdist(unsigned int vid_start, geodesic::Mesh& geo
 		}
 	}
 }
-

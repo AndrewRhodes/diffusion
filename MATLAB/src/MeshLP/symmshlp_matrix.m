@@ -20,7 +20,7 @@ function [W A h] = symmshlp_matrix(filename, opt)
 % OUTPUTS
 %  W: symmetric weight matrix 
 %  A: area weight per vertex, the Laplace matrix = diag(1./ A) * W 
-%	h: Gaussian width: h^2 = 4t 
+%  h: Gaussian width: h^2 = 4t 
 
 
 if nargin < 1

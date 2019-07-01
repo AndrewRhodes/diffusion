@@ -103,7 +103,7 @@ for i = 1 : Keypoint.Count
                             end
                             
                         % DoG local extrema
-                        elseif strcmpi(DoGNormalize, 'NLoG') && strcmpi(CompareMethod, '<>')
+                        elseif strcmpi(DoGNormalize, 'DoG') && strcmpi(CompareMethod, '<>')
                             
                             if abs(NextDoG) > abs(CurrentDoG)
                                 

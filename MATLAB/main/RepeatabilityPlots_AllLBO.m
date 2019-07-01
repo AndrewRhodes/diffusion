@@ -7,11 +7,12 @@ clc
 global ProjectRoot; % Additional Paths
 
 UseNMS = 1;
-t_scale = 1/sqrt(2);
-level_min = 3;
-t_range = 1/2;
-NoiseType = 'Signal'; % 'Signal', 'Vertex' %
-LBO = {'Mesh_','Mesh_euc','Umbrella','Cotangent'};
+l_scale = 1/1.2; % 1/sqrt(2)
+level_min = 0;
+l_range = 2; % 2,  1/2
+NoiseType = 'Vertex'; % 'Signal', 'Vertex' %
+LBO = {'Mesh_rho4_ddr_geo','Mesh_rho4_ddr_euc','Umb2','Cot'};
+LBOType = {'mesh', 'mesh', 'umb', 'cot'};
 % LBO = {'Mesh_psp_opt_rho6_geo_LBM1','Mesh_psp_opt_rho6_euc','Umbrella_psp_opt','Cotangent_psp_opt'};
 RunType = '_te8'; % 'Umbrella', 'Cotangent', 'Mesh', 'Mesh_euc_te8', 'Mesh_te8' %
 lines = 1;
@@ -58,7 +59,13 @@ for k = 1 : modelDataLength
     
     for kkk = 1 : LBOLength
         
-        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',modelData{k},'/',NoiseType,'Noise/',LBO{kkk},RunType,'/');
+%         if kkk == 1 || kkk == 2
+%             level_min = 3;
+%         else
+%             level_min = 4;
+%         end
+%         
+        FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',modelData{k},'/',NoiseType,'Noise/',LBO{kkk},'/');
 %         FileLocation = strcat('/media/andrew/WDRhodes/diffusiondata/',modelData{k},'/',NoiseType,'Noise/',LBO{kkk},RunType,'/');
 %         FileLocation = strcat('/media/andrew/WDRhodes/diffusiondata/',modelData{k},'/',NoiseType,'Noise/',LBO{kkk},'/');
     %     if strcmpi(NoiseType,'Vertex')
@@ -71,22 +78,26 @@ for k = 1 : modelDataLength
             NoiseFileLocation = strcat(FileLocation,'Std_',num2str(NoiseVec(kk)),'/');
 
             if UseNMS
-                NumIter = numel(dir(strcat(NoiseFileLocation, 'NMS*.mat')));
+                if l_range == 1/2
+                    NumIter = numel(dir(strcat(NoiseFileLocation, 'NMS*_sigma*.mat')));  
+                elseif l_range == 2
+                    NumIter = numel(dir(strcat(NoiseFileLocation, 'NMS*_ebar*.mat')));
+                end
+%                 NumIter = numel(dir(strcat(NoiseFileLocation, 'NMS*.mat')));
             else
                 NumIter = numel(dir(strcat(NoiseFileLocation, 'Keypoint*.mat')));
             end
-
-            NumIter %= NumIter/2
-
+    
+            
             if strcmpi(NoiseType,'Vertex')
                 
                 [Error{k, kk, kkk}, NoMatch{k, kk, kkk}] = findKeypointErrorVertexNoise(PointCloud, NoiseVec(kk), ...
-                    FileLocation, NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range);
+                    FileLocation, NoiseFileLocation, NumIter, UseNMS, l_scale, level_min, l_range, LBOType{kkk});
                 
             else
 
                 [Error{k, kk, kkk}, NoMatch{k, kk, kkk}] = findKeypointErrorNew(PointCloud, FileLocation,...
-                    NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range);
+                    NoiseFileLocation, NumIter, UseNMS, l_scale, level_min, l_range, LBOType{kkk});
 
             end
 
@@ -106,7 +117,11 @@ positions = [1, 1.2, 1.4, 1.6, 1.8];
 LineStyles = {'k-', 'g--', 'r:', 'b-.'};
         
 
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Scale Repeatability
+
 
 figure
 hold on
@@ -136,8 +151,11 @@ xtickangle(ax,-30)
 legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal', 'Location', 'northoutside')
 % legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal')
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Relative Repeatability
 figure
 hold on
 for jjj = 1 : LBOLength
@@ -167,11 +185,13 @@ legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation'
 % legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal')
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Absolute Repeatability
 
 figure
-hold on
 for jjj = 1 : LBOLength
     for jj = 1 : modelDataLength
         cp = positions + (jj - 1)*2;
@@ -179,7 +199,9 @@ for jjj = 1 : LBOLength
         for j = 1 : NoiseVecLength
             Data(j) = median(Error{jj, j, jjj}.Count);
         end
-        p(jjj) = plot(cp, Data, LineStyles{jjj}, 'Linewidth', 4);
+%         p(jjj) = plot(cp, Data, LineStyles{jjj}, 'Linewidth', 4);
+        p(jjj) = semilogy(cp, Data, LineStyles{jjj}, 'Linewidth', 4);
+        hold on
         ylims(jj,:) = get(gca, 'YLim');
     end
 end
@@ -198,6 +220,46 @@ xtickangle(ax,-30)
 % legend(p, {'Mesh Geo.','Umb.','Cot.'}, 'FontSize', 30)
 legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal', 'Location', 'northoutside')
 % legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal')
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Quantity.
+
+figure
+for jjj = 1 : LBOLength
+    for jj = 1 : modelDataLength
+        cp = positions + (jj - 1)*2;
+        Data = zeros(NoiseVecLength,1);
+        for j = 1 : NoiseVecLength
+            Data(j) = median(Error{jj, j, jjj}.Quantity);
+        end
+%         p(jjj) = plot(cp, Data, LineStyles{jjj}, 'Linewidth', 4);
+        p(jjj) = semilogy(cp, Data, LineStyles{jjj}, 'Linewidth', 4);
+        hold on
+%         pause
+        ylims(jj,:) = get(gca, 'YLim');
+    end
+end
+
+
+xlim([0,2*modelDataLength])
+set(gca, 'Ylim', [0 max(ylims(:,2))]);
+ylabel('Count')
+ax = gca;
+%         ax.YTick = [0,40,80,120,160];
+ax.XTick = 1.25 + ((1:modelDataLength)-1)*2;
+ax.XTickLabel = modelData;
+ax.YTick = [10e1, 10e2, 10e3, 10e4];
+ax.XAxis.FontSize = 50;
+ax.YAxis.FontSize = 50;
+xtickangle(ax,-30)
+% legend(p, {'Mesh Geo.','Umb.','Cot.'}, 'FontSize', 30)
+legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal', 'Location', 'northoutside')
+% legend(p, {'Mesh Geo.','Mesh Euc.','Umb.','Cot.'}, 'FontSize', 50, 'Orientation','Horizontal')
+
 
 
 

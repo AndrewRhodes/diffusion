@@ -89,7 +89,7 @@ remover = @(neighbor) (neighbor(2:end));
 
 Neig = cellfun(searcher, repmat({KDTree}, PointCloudIn.LocationCount, 1),...
         mat2cell(PointCloudIn.Location, ones(PointCloudIn.LocationCount,1), 3),...
-        num2cell(sqrt(3)*PointCloudIn.ResolutionLocal));
+        num2cell(sqrt(3)*PointCloudIn.ResolutionLocal)); % sqrt(3) because in R^3. 
 
 Neighbors.Distance = cellfun(remover, Neig, 'Uni', 0);
 

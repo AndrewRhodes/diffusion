@@ -16,24 +16,33 @@ global ProjectRoot; % Additional Paths
 
 alpha = 1;
 
-options.rho = 6;
+options.rho = 4;
 options.dtype = 'geodesic'; % 'euclidean', 'geodesic' %
-options.htype = 'psp'; % 'psp', 'ddr'
+options.htype = 'ddr'; % 'psp', 'ddr'
 
-Destination = 'Mesh_psp_opt_rho6_geo_LBM1'
+Destination = 'Mesh_rho4_ddr_geo'
 ModelFolder = 'armadillo/';
 Model = 'Armadillo_e1_100000';
 
 
-BDF = 1;
-NumIter = 10;
-NumSteps = 1000;
-DoGNormalize = 'NLoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
+
+NumIter = 15;
+DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
 
-t_scale = 1/sqrt(2);
-t_range = 1/2;
+l_range1 = 1/2;
+l_range2 = 2;
+k = 1.2;%2^(1/4);
+l_scale = 1/k;
+l_ebar = 80;
+
+
+set_ltau = @(e_bar) 4*e_bar;
+set_hs = @(e_bar) 2*e_bar^(1/5);
+set_t0 = @(e_bar) e_bar/4 ;
+set_NumSteps = @(e_bar, t_0) ceil(log((l_ebar*e_bar)^2 / (2*alpha*t_0)) / (2*log(k)));
+
 
 NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
 
@@ -53,9 +62,6 @@ FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/mesh/');
 FileLocationNeighbors = strcat(FileLocationWD,ModelFolder,'neighbors/');
 
 
-setTau = @(e_bar) e_bar^(2/5);
-setHs = @(e_bar) 2*e_bar^(1/5);
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,7 +75,7 @@ PointCloudOriginal.FaceCount = size(PointCloudOriginal.Face, 1);
 PointCloudOriginal.FaceArea = findFaceArea(PointCloudOriginal.Location,PointCloudOriginal.Face);
 PointCloudOriginal = findMeshResolution(PointCloudOriginal, 'Model');
 
-
+NumSteps = set_NumSteps(PointCloudOriginal.Resolution, set_t0(PointCloudOriginal.Resolution));
 
 
 for j = 1 : length(NoiseVec)
@@ -137,7 +143,9 @@ for j = 1 : length(NoiseVec)
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        tau = setTau(PointCloud.Resolution);
+        l_tau = set_ltau(PointCloud.Resolution);
+        t_0 = set_t0(PointCloud.Resolution);
+	
         if strcmp(options.htype, 'psp')
             options.hs = setHs(PointCloud.Resolution);
         end
@@ -150,66 +158,70 @@ for j = 1 : length(NoiseVec)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Setup Laplace-Beltrami
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        FileNameItL = strcat(Model,'_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),...
-                    '_',options.dtype(1:3),'_',options.htype,'_e0.4','_h2e0.2','_LBM1',...
-                    '_sigma',num2str(NoiseVec(j)), '_iter',num2str(i),'.mat');
-        
-        
-        if ~exist( strcat(FileLocationMeshItL, FileNameItL),'file')
-            ItL = makeMeshLaplaceBeltrami( FileNameOff, options, BDF, tau, alpha);
-            save(strcat(FileLocationMeshItL, FileNameItL),'ItL','-v7.3');
+
+
+        FileNameLBM = strcat(Model,'_LBM','_mesh_', options.dtype(1:3),'_rho',...
+                      num2str(options.rho),'_', options.htype,'_sigma',num2str(NoiseVec(j)),...
+                  '_iter',num2str(i),'.mat');
+
+
+        if ~exist(strcat(FileLocationMeshItL, FileNameLBM), 'file')
+            [LBM] = makeMeshLaplaceBeltrami( FileNameOff, options);
+            save(strcat(FileLocationMeshItL, FileNameLBM), 'LBM','-v7.3');
         else
-            load(strcat(FileLocationMeshItL, FileNameItL), 'ItL');
+            load(strcat(FileLocationMeshItL, FileNameLBM), 'LBM');
         end
-        
+
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Scale Parameters
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
+	
+        [tn, tau_n, sigma_n] = findScaleStep(k, t_0, alpha, NumSteps);
 
-%         ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloud.Resolution);
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Diffusion of Mean Curvature
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-       
-        Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
-        
-%         Signal = performBDFDiffusion_cpp(ItL, PointCloud.Signal, NumSteps);
- 
+       [Signal, IterCount] = performBDFDiffusion(PointCloud.Signal, LBM, alpha, tau_n, NumSteps, l_tau);
+
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Find Difference of Gaussian
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+        DoG = buildDoG(Signal, sigma_n, DoGNormalize);
 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Detect Extrema
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        %     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
         [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
         Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
         Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
-        Keypoint.Scale = ScaleParameter(Keypoint.Level);
-
-
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
+        Keypoint.Scale = sigma_n(Keypoint.Level);
+        Keypoint.Count = length(Keypoint.Scale);
+        
+        
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range1, 'sigma', DoGNormalize, CompareMethod);               
 
 
         FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'VertexNoise/',Destination,'/Std_',num2str(NoiseVec(j)),'/');
         FileName = strcat('Keypoint','_Iter',num2str(i),'.mat');
         save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
 
-        FileName = strcat('NMSKeypoint','_Iter',num2str(i),'.mat');
+        FileName = strcat('NMSKeypoint','_sigma_Iter',num2str(i),'.mat');
+        save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')      
+    
+        
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range2, 'ebar', DoGNormalize, CompareMethod);
+        FileName = strcat('NMSKeypoint','_ebar_Iter',num2str(i),'.mat');
         save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
-    
-    
+        
+        
     end
 end
 
@@ -233,67 +245,67 @@ for i = 1
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    tau = setTau(PointCloud.Resolution);
+    l_tau = set_ltau(PointCloudOriginal.Resolution);
+    t_0 = set_t0(PointCloudOriginal.Resolution);
+
+
     if strcmp(options.htype, 'psp')
         options.hs = setHs(PointCloud.Resolution);
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-
-    FileNameItL = strcat(Model,'_ItL','_BDF',num2str(BDF),'_rho',num2str(options.rho),...
-                    '_',options.dtype(1:3),'_',options.htype,'_e0.4','_h2e0.2','_LBM1','.mat');
+    FileNameLBM = strcat(Model,'_LBM','_mesh_', options.dtype(1:3),'_rho',...
+                  num2str(options.rho),'_', options.htype,'.mat'); 
+                   
         
-    if ~exist(strcat(FileLocationMeshItL, FileNameItL),'file')
-        ItL = makeMeshLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
-        save(strcat(FileLocationMeshItL, FileNameItL),'ItL','-v7.3');
+    if ~exist(strcat(FileLocationMeshItL, FileNameLBM),'file')
+        [LBM] = makeMeshLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options);
+        save(strcat(FileLocationMeshItL, FileNameLBM),'LBM','-v7.3');
     else
-        load(strcat(FileLocationMeshItL, FileNameItL), 'ItL');
+        load(strcat(FileLocationMeshItL, FileNameLBM), 'LBM');
     end
    
     
+	[tn, tau_n, sigma_n] = findScaleStep(k, t_0, alpha, NumSteps);
 
-    ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
-
-%     ScaleParameterAbsolute = bsxfun(@plus, ScaleParameter, PointCloudOriginal.Resolution);
-    
-    
-    Signal = performBDFDiffusion(PointCloudOriginal.Signal, NumSteps, ItL);
-%     Signal = performBDFDiffusion_cpp(ItL, PointCloud.Signal, NumSteps);
+    [Signal, IterCount] = performBDFDiffusion(PointCloudOriginal.Signal, LBM, alpha, tau_n, NumSteps, l_tau);
 
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find Difference of Gaussian
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+    DoG = buildDoG(Signal, sigma_n, DoGNormalize);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Detect Extrema
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-%     Keypoint = findKeypoint(DoG, PointCloud, ScaleParameter, Neighbors.Distance, KeypointMethod, CompareMethod);
     [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
     Keypoint.Normal = PointCloudOriginal.Normal(Keypoint.LocationIndex,:);
     Keypoint.Location = PointCloudOriginal.Location(Keypoint.LocationIndex,:);
-    Keypoint.Scale = ScaleParameter(Keypoint.Level);
-%     Keypoint.Scale = ScaleParameter(Keypoint.Level) + PointCloudOriginal.ResolutionLocal(Keypoint.LocationIndex);
-
+    Keypoint.Scale = sigma_n(Keypoint.Level);
+    Keypoint.Count = length(Keypoint.Scale);
     
-    NMSKeypoint = applyNMS(PointCloudOriginal, DoG, Keypoint, t_scale, t_range, DoGNormalize, CompareMethod);
-
     
     FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/',ModelFolder,'VertexNoise/',Destination,'/');
-    FileName = strcat('Keypoint','.mat');
     
+    
+    FileName = strcat('Keypoint','.mat');    
     save(fullfile(FileLocation, FileName), 'Keypoint', '-v7.3')
     
-    FileName = strcat('NMSKeypoint','.mat');
+    
+    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range1, 'sigma', DoGNormalize, CompareMethod);               
+    FileName = strcat('NMSKeypoint_sigma','.mat');
     save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
 
+    
+    
+    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range2, 'ebar', DoGNormalize, CompareMethod);
+    FileName = strcat('NMSKeypoint_ebar','.mat');
+    save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
+    
+    
+    
 end
-
-
-DE_Armadillo_e1
-
-clear

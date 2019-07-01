@@ -1,7 +1,7 @@
 
 
 
-function [Error, NoMatch] = findKeypointErrorVertexNoise(PointCloud, NoiseVec, FileLocation, NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range)
+function [Error, NoMatch] = findKeypointErrorVertexNoise(PointCloud, NoiseVec, FileLocation, NoiseFileLocation, NumIter, UseNMS, t_scale, level_min, t_range, LBO)
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -12,15 +12,29 @@ function [Error, NoMatch] = findKeypointErrorVertexNoise(PointCloud, NoiseVec, F
 % FileLocation = strcat(ProjectRoot,'/main/DE/keypointdata/bunny/');
 
 if UseNMS
-    load(strcat(FileLocation, 'NMSKeypoint.mat'),'NMSKeypoint')
-    KeypointOriginal = NMSKeypoint;
+    if t_range == 1/2
+       load(strcat(FileLocation, 'NMSKeypoint_sigma.mat'),'NMSKeypoint')
+        KeypointOriginal = NMSKeypoint; 
+    elseif t_range == 2
+        load(strcat(FileLocation, 'NMSKeypoint_ebar.mat'),'NMSKeypoint')
+        KeypointOriginal = NMSKeypoint;
+    end 
+%     load(strcat(FileLocation, 'NMSKeypoint.mat'),'NMSKeypoint')
+%     KeypointOriginal = NMSKeypoint;
 else
     load(strcat(FileLocation, 'Keypoint.mat'),'Keypoint')
     KeypointOriginal = Keypoint;
 end
 
 if level_min
-    ScaleLogic = KeypointOriginal.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointOriginal.LocationIndex) );
+    if strcmpi(LBO, 'mesh')
+        ScaleLogic = KeypointOriginal.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointOriginal.LocationIndex) );
+    elseif strcmpi(LBO, 'cot')
+        ScaleLogic = KeypointOriginal.Scale < ( level_min * sqrt(PointCloud.ResolutionLocal(KeypointOriginal.LocationIndex)) );
+    elseif strcmpi(LBO, 'umb')
+        ScaleLogic = KeypointOriginal.Scale < ( level_min );
+    end
+    
     if isfield(KeypointOriginal, 'Count')
         KeypointOriginal = rmfield(KeypointOriginal, 'Count');
     end
@@ -30,25 +44,8 @@ if level_min
     end
     KeypointOriginal.Count = length(KeypointOriginal.LocationIndex);
     
-%     LevelLogic = KeypointOriginal.Level > 500;
-%     if isfield(KeypointOriginal, 'Count')
-%         KeypointOriginal = rmfield(KeypointOriginal, 'Count');
-%     end
-%     FNames = fieldnames(KeypointOriginal);
-%     for jj = 1 : length(FNames)
-%         KeypointOriginal.(FNames{jj})(LevelLogic,:) = [];
-%     end
-%     KeypointOriginal.Count = length(KeypointOriginal.LocationIndex);
-
-    % % % % %     ScaleLogic = ((KeypointOriginal.Scale - PointCloud.ResolutionLocal(KeypointOriginal.Location)) ./ PointCloud.Resolution) < level_min;
-    % % % % %     ScaleLogic = (KeypointOriginal.Scale ./ PointCloud.Resolution) < 4;
-    %     ScaleLogic = KeypointOriginal.Level > level_min;
-%     KeypointOriginal.Scale(ScaleLogic) = [];
-%     KeypointOriginal.Location(ScaleLogic) = [];
-%     KeypointOriginal.Level(ScaleLogic) = [];
 end
 
-% KeypointOriginal.Count
 
 % KeypointTree = KDTreeSearcher(KeypointOriginal.Location, 'Distance', 'euclidean');
 
@@ -67,9 +64,17 @@ NoMatch = zeros(NumIter,1);
 
 for i = 1 : NumIter
     
-    if UseNMS        
-        load(strcat(NoiseFileLocation, 'NMSKeypoint','_Iter',num2str(i),'.mat'),'NMSKeypoint')
-        KeypointIter = NMSKeypoint;
+    if UseNMS     
+        if t_range == 1/2
+            load(strcat(NoiseFileLocation, 'NMSKeypoint_sigma','_Iter',num2str(i),'.mat'),'NMSKeypoint')
+            KeypointIter = NMSKeypoint;            
+        elseif t_range == 2
+            load(strcat(NoiseFileLocation, 'NMSKeypoint_ebar','_Iter',num2str(i),'.mat'),'NMSKeypoint')
+            KeypointIter = NMSKeypoint;
+        end   
+        
+%         load(strcat(NoiseFileLocation, 'NMSKeypoint','_Iter',num2str(i),'.mat'),'NMSKeypoint')
+%         KeypointIter = NMSKeypoint;
     else
         load(strcat(NoiseFileLocation, 'Keypoint','_Iter',num2str(i),'.mat'),'Keypoint')
         KeypointIter = Keypoint;
@@ -78,7 +83,14 @@ for i = 1 : NumIter
 %     KeypointIter.Count
     
     if level_min
-        ScaleLogic = KeypointIter.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointIter.LocationIndex));
+        if strcmpi(LBO, 'mesh')
+            ScaleLogic = KeypointIter.Scale < ( level_min * PointCloud.ResolutionLocal(KeypointIter.LocationIndex) );
+        elseif strcmpi(LBO, 'cot')
+            ScaleLogic = KeypointIter.Scale < ( level_min * sqrt(PointCloud.ResolutionLocal(KeypointIter.LocationIndex)) );
+        elseif strcmpi(LBO, 'umb')
+            ScaleLogic = KeypointIter.Scale < ( level_min );
+        end
+        
         if isfield(KeypointOriginal, 'Count')
             KeypointIter = rmfield(KeypointIter, 'Count');
         end        
@@ -88,22 +100,6 @@ for i = 1 : NumIter
         end
         KeypointIter.Count = length(KeypointIter.LocationIndex);
         
-%         LevelLogic = KeypointIter.Level > 500;
-%         if isfield(KeypointIter, 'Count')
-%             KeypointIter = rmfield(KeypointIter, 'Count');
-%         end
-%         FNames = fieldnames(KeypointIter);
-%         for jj = 1 : length(FNames)
-%             KeypointIter.(FNames{jj})(LevelLogic,:) = [];
-%         end
-%         KeypointIter.Count = length(KeypointIter.LocationIndex);
-
-        % % % % %         ScaleLogic = ((KeypointIter.Scale - PointCloud.ResolutionLocal(KeypointIter.Location)) ./ PointCloud.Resolution) < level_min;
-        % % % % %         ScaleLogic = (KeypointIter.Scale ./ PointCloud.Resolution) < 4;
-        %         ScaleLogic = KeypointIter.Level > level_min;
-%         KeypointIter.Scale(ScaleLogic) = [];
-%         KeypointIter.Location(ScaleLogic,:) = [];
-%         KeypointIter.Level(ScaleLogic) = [];
     end
     
     
@@ -121,8 +117,11 @@ for i = 1 : NumIter
     for j = 1 : KeypointOriginal.Count
         CurrentPoint = KeypointOriginal.Location(j,:);
         CurrentScale = KeypointOriginal.Scale(j,1);
-%         srange = t_range * CurrentScale;
-        srange = 2 * PointCloud.Resolution;
+        if t_range == 0.5
+            srange = t_range * CurrentScale;
+        elseif t_range == 2
+            srange = t_range * PointCloud.Resolution;
+        end
         [Neigh, Dist] = rangesearch(KeypointIterTree, CurrentPoint, srange);
         
         Neigh = Neigh{:};
@@ -173,7 +172,7 @@ for i = 1 : NumIter
     Error.RelativeRepeat(i,1) = Error.Count(i,1) / KeypointOriginal.Count;
     Error.ScaleRepeat(i,1) = sum(Error.Scale{i,1}) / Error.Count(i,1);
     
-        
+    Error.Quantity(i,1) = KeypointIter.Count;    
     
 end
 

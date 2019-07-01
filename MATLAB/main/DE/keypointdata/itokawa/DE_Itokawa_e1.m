@@ -20,20 +20,27 @@ options.rho = 4;
 options.dtype = 'geodesic'; % 'euclidean', 'geodesic' %
 options.htype = 'ddr'; % 'psp', 'ddr'
 
-Destination = 'Mesh_rho4_ddr_geo'
+Destination = 'Mesh_rho4_ddr_geo' %'Mesh_rho4_ddr_geo_t0.25'
 ModelFolder = 'itokawa/';
 Model = 'Itokawa_e1_80000';
 
-BDF = 1;
-NumIter = 10;
-NumSteps = 2000;
-DoGNormalize = 'NLoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
+NumIter = 15;
+DoGNormalize = 'DoG'; % 'DoG', 'AbsDoG', 'NLoG', 'AbsNLoG'
 CompareMethod = '<>'; % '<', '>', '<>'
 KeypointMethod = 'Old'; % 'Old', 'New'
 
-t_scale = 1/sqrt(2);
-t_range1 = 1/2;
-t_range2 = 2;
+l_range1 = 1/2;
+l_range2 = 2;
+k = 1.2;%2^(1/4);
+l_scale = 1/k;
+l_ebar = 80;
+
+
+set_ltau = @(e_bar) 4*e_bar;
+set_hs = @(e_bar) 2*e_bar^(1/5);
+set_t0 = @(e_bar) e_bar/4 ;
+set_NumSteps = @(e_bar, t_0) ceil(log((l_ebar*e_bar)^2 / (2*alpha*t_0)) / (2*log(k)));
+
 
 NoiseVec = [0.1, 0.2, 0.3, 0.4, 0.5];
 
@@ -51,16 +58,15 @@ TmpLocation = strcat(ProjectRoot,'/models/object/',ModelFolder,'meshlab/');
 FileLocationMeshItL = strcat(FileLocationWD,ModelFolder,'LBO/mesh/');
 FileLocationNeighbors = strcat(FileLocationWD,ModelFolder,'neighbors/');
 
-FileNameItL = strcat(Model,'_ItL','_BDF',num2str(BDF),'_rho',...
-              num2str(options.rho),'_',options.dtype(1:3),'_',...
-              options.htype,'_t0.25e','_a',num2str(alpha),'.mat'); 
+FileNameLBM = strcat(Model,'_LBM','_mesh_', options.dtype(1:3),'_rho',...
+              num2str(options.rho),'_', options.htype,'.mat'); 
           
-setTau = @(e_bar) 0.25*e_bar;
-setHs = @(e_bar) 2*e_bar^(1/5);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Load the Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 [PointCloud.Location, PointCloud.Face, PointCloud.Normal, PointCloud.Signal]...
                 = read_ply_all_elements( fullfile( FileLocationModel, FileNameModelPly ) );
@@ -86,9 +92,12 @@ PointCloud = findLocalResolution(PointCloud, Neighbors.Connect);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-tau = setTau(PointCloud.Resolution);
+l_tau = set_ltau(PointCloud.Resolution);
+t_0 = set_t0(PointCloud.Resolution);
+NumSteps = set_NumSteps(PointCloud.Resolution, t_0);
+
 if strcmp(options.htype, 'psp')
-    options.hs = setHs(PointCloud.Resolution);
+    options.hs = set_hs(PointCloud.Resolution);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -109,13 +118,12 @@ stdMK = std(MKQuant);
 % Setup Laplace-Beltrami
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-                 
-                               
-if ~exist(strcat(FileLocationMeshItL, FileNameItL), 'file')
-    ItL = makeMeshLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options, BDF, tau, alpha);
-    save(strcat(FileLocationMeshItL, FileNameItL),'ItL','-v7.3');
+
+if ~exist(strcat(FileLocationMeshItL, FileNameLBM), 'file')
+    [LBM] = makeMeshLaplaceBeltrami( fullfile( FileLocationModel, FileNameModelOff ), options);
+    save(strcat(FileLocationMeshItL, FileNameLBM), 'LBM','-v7.3');
 else
-    load(strcat(FileLocationMeshItL, FileNameItL), 'ItL');
+    load(strcat(FileLocationMeshItL, FileNameLBM), 'LBM');
 end
 
 
@@ -123,7 +131,9 @@ end
 % Scale Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-ScaleParameter = findScaleParameter(tau, alpha, NumSteps, 'Laplacian', 'Natural');
+
+[tn, tau_n, sigma_n] = findScaleStep(k, t_0, alpha, NumSteps);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Diffusion of Mean Curvature
@@ -136,17 +146,13 @@ for j = 1 : length(NoiseVec)
         
         SignalNoisy = PointCloud.Signal + NoiseVec(j)*stdMK*randn(PointCloud.LocationCount,1);
    
-
-        Signal = performBDFDiffusion(SignalNoisy, NumSteps, ItL);
-
-%         Signal = performBDFDiffusion_cpp(ItL, SignalNoisy, NumSteps);
-  
+        [Signal, IterCount] = performBDFDiffusion(SignalNoisy, LBM, alpha, tau_n, NumSteps, l_tau);                
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Find Difference of Gaussian
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+        DoG = buildDoG(Signal, sigma_n, DoGNormalize);
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Detect Extrema
@@ -156,10 +162,12 @@ for j = 1 : length(NoiseVec)
         [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
         Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
         Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
-        Keypoint.Scale = ScaleParameter(Keypoint.Level);
+        Keypoint.Scale = sigma_n(Keypoint.Level);
+        Keypoint.Count = length(Keypoint.Scale);
         
-        
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range1, 'sigma', DoGNormalize, CompareMethod);               
+ 
+ 
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range1, 'sigma', DoGNormalize, CompareMethod);               
         
         % SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors, NeighborFaces);
         
@@ -173,7 +181,7 @@ for j = 1 : length(NoiseVec)
         save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
         
         
-        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range2, 'ebar', DoGNormalize, CompareMethod);
+        NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range2, 'ebar', DoGNormalize, CompareMethod);
         FileName = strcat('NMSKeypoint','_ebar_Iter',num2str(i),'.mat');
         save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
     end
@@ -181,19 +189,20 @@ end
 
 
 
+
 for i = 1
     
     sprintf('No Noise : %d',i)
-        
-    Signal = performBDFDiffusion(PointCloud.Signal, NumSteps, ItL);
-%     Signal = performBDFDiffusion_cpp(ItL, PointCloud.Signal, NumSteps);
-   
+    
+    [Signal, IterCount] = performBDFDiffusion(PointCloud.Signal, LBM, alpha, tau_n, NumSteps, l_tau);
+    
+    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find Difference of Gaussian
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    DoG = buildDoG(Signal, ScaleParameter, DoGNormalize);
+    DoG = buildDoG(Signal, sigma_n, DoGNormalize);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Detect Extrema
@@ -202,10 +211,10 @@ for i = 1
     [Keypoint.LocationIndex, Keypoint.Level] = findKeypoint_c(DoG, Neighbors.Distance);
     Keypoint.Normal = PointCloud.Normal(Keypoint.LocationIndex,:);
     Keypoint.Location = PointCloud.Location(Keypoint.LocationIndex,:);
-    Keypoint.Scale = ScaleParameter(Keypoint.Level);
-        
+    Keypoint.Scale = sigma_n(Keypoint.Level);
+    Keypoint.Count = length(Keypoint.Scale);
     
-    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range1, 'sigma', DoGNormalize, CompareMethod);
+    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range1, 'sigma', DoGNormalize, CompareMethod);
  
     %     SubKeypoint = findSubKeypoint(Keypoint, ScaleParameterAbsolute, DoG, PointCloud, Neighbors.Connect, NeighborFaces.Connect);
     
@@ -219,15 +228,17 @@ for i = 1
     save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
 
     
-    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, t_scale, t_range2, 'ebar', DoGNormalize, CompareMethod);
+    NMSKeypoint = applyNMS(PointCloud, DoG, Keypoint, l_scale, l_range2, 'ebar', DoGNormalize, CompareMethod);
     FileName = strcat('NMSKeypoint_ebar','.mat');
     save(fullfile(FileLocation, FileName), 'NMSKeypoint', '-v7.3')
   
 end
 
-
-
+DE_Itokawa_e1_euc
 DE_Itokawa_e1_Umbrella
 DE_Itokawa_e1_Cotangent
-DE_Itokawa_e1_euc
 
+DE_Itokawa_e1_VNoise
+DE_Itokawa_e1_VNoise_euc
+DE_Itokawa_e1_VNoise_Umbrella
+DE_Itokawa_e1_VNoise_Cotangent

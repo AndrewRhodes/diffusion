@@ -1,4 +1,4 @@
-
+    
 
 
 
@@ -28,14 +28,21 @@ for i = 1 : NumLevels - 1
         DoG(:,i) = abs(SignalIn(:,i+1) - SignalIn(:,i)) ;
         
     elseif strcmpi(DoGNormalize, 'NLoG')
-                       
-        DoG(:,i) = ( SignalIn(:,i+1) - SignalIn(:,i) ) ...
-                * (ScaleParameterIn(i+1,1)^2 ...
-                / ( ScaleParameterIn(i+1,1)^2 - ((i+1)/i)*ScaleParameterIn(i,1)^2 ) );
-            
+%                        
 %         DoG(:,i) = ( SignalIn(:,i+1) - SignalIn(:,i) ) ...
-%                 * (ScaleParameterIn(i,1)^2 ...
-%                 / ( (i/(i+1))*ScaleParameterIn(i+1,1)^2 - ScaleParameterIn(i,1)^2 ) );
+%                 * (ScaleParameterIn(i+1,1)^2 ...
+%                 / ( ScaleParameterIn(i+1,1)^2 - (i/(i+1))*ScaleParameterIn(i,1)^2 ) );
+            
+
+        DoG(:,i) = ( SignalIn(:,i+1) - SignalIn(:,i) ) ...
+            * (ScaleParameterIn(i+1,1)^2 ...
+            / ( ScaleParameterIn(i+1,1)^2 - ScaleParameterIn(i,1)^2 ) );
+
+
+%         DoG(:,i) = (i+1)*( SignalIn(:,i+1) - SignalIn(:,i) ) / ( ScaleParameterIn(i+1,1)^2 - ScaleParameterIn(i,1)^2 - 1 );
+
+%         DoG(:,i) = ( SignalIn(:,i+1) - SignalIn(:,i) );  
+
         
     elseif strcmpi(DoGNormalize, 'AbsNLoG')
         

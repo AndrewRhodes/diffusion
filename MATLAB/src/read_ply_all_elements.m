@@ -13,7 +13,7 @@ function [vertex, face, vnormal, curvature] = read_ply_all_elements(filename)
 
 [d,c] = plyread(filename);
 
-
+% color = [d.vertex.red, d.vertex.blue, d.vertex.green];
 vi = d.face.vertex_indices;
 nf = length(vi);
 face = zeros(nf,3);
